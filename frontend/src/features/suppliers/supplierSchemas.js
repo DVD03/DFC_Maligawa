@@ -15,7 +15,7 @@ export const supplierFormSchema = z.object({
     displayName: z.string().min(1, 'Display name required').max(100),
     firstName: z.string().optional().or(z.literal('')),
     lastName: z.string().optional().or(z.literal('')),
-    category: z.enum(['raw_material', 'packaging', 'services', 'equipment', 'finished_goods', 'multiple']),
+    category: z.enum(['bakery_short_eats', 'raw_material', 'packaging', 'services', 'equipment', 'finished_goods', 'multiple']),
     taxRegistrationNumber: z.string().optional().or(z.literal('')),
     businessRegistrationNumber: z.string().optional().or(z.literal('')),
 

@@ -3,22 +3,29 @@ import mongoose from 'mongoose';
 import StockItem from '../models/StockItem.js';
 import StockMovement from '../models/StockMovement.js';
 import StockReservation from '../models/StockReservation.js';
+import Product from '../models/Product.js';
 import {
     increaseStock, decreaseStock,
 } from '../services/stockService.js';
 
 /**
  * GET /api/stock
- * List stock items with filters
+ * List stock items with filters (excludes bakery items by default)
  */
 export const getStockItems = asyncHandler(async (req, res) => {
     const {
-        search, productId, warehouseId, lowStock,
+        search, productId, warehouseId, lowStock, includeBakery,
         page = 1, limit = 50,
     } = req.query;
 
     const filter = {};
-    if (productId) filter.productId = productId;
+    if (productId) {
+        filter.productId = productId;
+    } else if (includeBakery !== 'true') {
+        const nonBakeryProducts = await Product.find({ isBakeryItem: { $ne: true } }).select('_id').lean();
+        filter.productId = { $in: nonBakeryProducts.map(p => p._id) };
+    }
+
     if (warehouseId) filter.warehouseId = warehouseId;
     if (search) {
         filter.$or = [

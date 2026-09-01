@@ -2,10 +2,13 @@ import asyncHandler from 'express-async-handler';
 import mongoose from 'mongoose';
 import GoodsReceiptNote from '../models/GoodsReceiptNote.js';
 import PurchaseOrder from '../models/PurchaseOrder.js';
+import Bill from '../models/Bill.js';
+import Payment from '../models/Payment.js';
+import Supplier from '../models/Supplier.js';
 import { increaseStock, decreaseStock } from '../services/stockService.js';
 
 /**
- * Create a GRN — receives goods and increases stock atomically.
+ * Create a GRN — receives goods, creates Bill, handles optional payment, and increases stock atomically.
  */
 export const createGrn = asyncHandler(async (req, res) => {
     const { purchaseOrderId, supplierId, warehouseId, items, ...rest } = req.body;
@@ -25,11 +28,15 @@ export const createGrn = asyncHandler(async (req, res) => {
         throw new Error('Supplier ID is required for GRN without Purchase Order');
     }
 
+    const effectiveSupplierId = po?.supplierId || supplierId;
+    const supplierDoc = await Supplier.findById(effectiveSupplierId);
+
     // Validate items against PO if available
     const poItemsMap = po ? new Map(po.items.map((i) => [i._id.toString(), i])) : null;
 
     const session = await mongoose.startSession();
     let grn;
+    let createdBill = null;
 
     try {
         await session.withTransaction(async () => {
@@ -65,8 +72,8 @@ export const createGrn = asyncHandler(async (req, res) => {
             grn = new GoodsReceiptNote({
                 purchaseOrderId: po?._id,
                 poNumber: po?.poNumber,
-                supplierId: po?.supplierId || supplierId,
-                supplierName: po?.supplierSnapshot?.name || rest.supplierName,
+                supplierId: effectiveSupplierId,
+                supplierName: po?.supplierSnapshot?.name || supplierDoc?.displayName || rest.supplierName,
                 warehouseId,
                 items: grnItems,
                 status: 'received',
@@ -141,6 +148,147 @@ export const createGrn = asyncHandler(async (req, res) => {
                 po.grns = [...(po.grns || []), grn._id];
                 await po.save({ session });
             }
+
+            // ── Auto-create Purchase Bill ──
+            const billItems = grn.items
+                .filter(item => (item.acceptedQuantity || item.receivedQuantity) > 0)
+                .map((item, idx) => {
+                    const qty = item.acceptedQuantity || item.receivedQuantity || 0;
+                    const price = item.unitPrice || 0;
+                    const lineGross = qty * price;
+                    const discount = item.discountAmount || (lineGross * (item.discountPercent || 0) / 100);
+                    const lineNet = Math.max(0, lineGross - discount);
+
+                    return {
+                        lineNumber: idx + 1,
+                        productId: item.productId,
+                        productCode: item.productCode,
+                        productName: item.productName,
+                        quantity: qty,
+                        unitOfMeasure: item.unitOfMeasure || 'pcs',
+                        unitPrice: price,
+                        discountPercent: item.discountPercent || 0,
+                        discountAmount: discount,
+                        lineSubtotal: lineGross,
+                        lineDiscount: discount,
+                        lineTotal: lineNet,
+                        grnLineItemId: item._id,
+                    };
+                });
+
+            const billGrandTotal = grn.totalReceivedValue || grn.totalAcceptedValue || 0;
+            const paidAmount = Math.min(billGrandTotal, Number(rest.paidAmount) || 0);
+            const balanceDue = Math.max(0, billGrandTotal - paidAmount);
+
+            let paymentStatus = 'unpaid';
+            if (paidAmount >= billGrandTotal && billGrandTotal > 0) {
+                paymentStatus = 'paid';
+            } else if (paidAmount > 0) {
+                paymentStatus = 'partially_paid';
+            }
+
+            createdBill = new Bill({
+                supplierId: effectiveSupplierId,
+                supplierSnapshot: {
+                    name: supplierDoc?.displayName || rest.supplierName || 'Supplier',
+                    code: supplierDoc?.supplierCode || '',
+                    taxRegistrationNumber: supplierDoc?.taxRegistrationNumber || '',
+                },
+                supplierInvoiceNumber: rest.supplierInvoiceNumber || rest.supplierDN || '',
+                purchaseOrderIds: po ? [po._id] : [],
+                purchaseOrderNumbers: po ? [po.poNumber] : [],
+                grnIds: [grn._id],
+                grnNumbers: [grn.grnNumber],
+                billDate: grn.receiptDate || new Date(),
+                dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                receivedDate: grn.receiptDate || new Date(),
+                items: billItems,
+                globalDiscountPercent: grn.billDiscountPercent || 0,
+                globalDiscountAmount: grn.billDiscountAmount || 0,
+                grandTotal: billGrandTotal,
+                amountPaid: paidAmount,
+                balanceDue,
+                paymentStatus,
+                status: 'approved',
+                notes: rest.notes || `Auto-created bill from GRN ${grn.grnNumber}`,
+                approvedBy: req.user._id,
+                approvedAt: new Date(),
+                createdBy: req.user._id,
+            });
+
+            await createdBill.save({ session });
+
+            // Record Payment if paidAmount > 0
+            if (paidAmount > 0) {
+                const method = rest.paymentMethod === 'bank_transfer' ? 'bank_transfer'
+                    : rest.paymentMethod === 'cheque' ? 'cheque'
+                    : rest.paymentMethod === 'card' ? 'card' : 'cash';
+
+                const allocations = [];
+                let remainingToAllocate = paidAmount;
+
+                // 1. Allocate to the current new bill
+                const allocCurrent = Math.min(remainingToAllocate, billGrandTotal);
+                if (allocCurrent > 0) {
+                    allocations.push({
+                        documentType: 'bill',
+                        documentId: createdBill._id,
+                        documentNumber: createdBill.billNumber,
+                        amount: allocCurrent,
+                    });
+                    remainingToAllocate -= allocCurrent;
+                }
+
+                // 2. If excess payment exists, allocate to previous unpaid bills (oldest first)
+                if (remainingToAllocate > 0) {
+                    const previousUnpaidBills = await Bill.find({
+                        supplierId: effectiveSupplierId,
+                        _id: { $ne: createdBill._id },
+                        status: { $ne: 'cancelled' },
+                        paymentStatus: { $in: ['unpaid', 'partially_paid', 'overdue'] },
+                    }).sort({ billDate: 1 }).session(session);
+
+                    for (const prevBill of previousUnpaidBills) {
+                        if (remainingToAllocate <= 0) break;
+                        const due = prevBill.balanceDue || (prevBill.grandTotal - (prevBill.amountPaid || 0));
+                        if (due <= 0) continue;
+
+                        const allocPrev = Math.min(remainingToAllocate, due);
+                        allocations.push({
+                            documentType: 'bill',
+                            documentId: prevBill._id,
+                            documentNumber: prevBill.billNumber,
+                            amount: allocPrev,
+                        });
+
+                        prevBill.amountPaid = (prevBill.amountPaid || 0) + allocPrev;
+                        prevBill.balanceDue = Math.max(0, due - allocPrev);
+                        prevBill.paymentStatus = prevBill.balanceDue === 0 ? 'paid' : 'partially_paid';
+                        if (prevBill.balanceDue === 0) prevBill.fullyPaidAt = new Date();
+                        await prevBill.save({ session });
+
+                        remainingToAllocate -= allocPrev;
+                    }
+                }
+
+                const payment = new Payment({
+                    direction: 'paid',
+                    supplierId: effectiveSupplierId,
+                    partyName: supplierDoc?.displayName || rest.supplierName || 'Supplier',
+                    amount: paidAmount,
+                    method,
+                    bankAccountId: rest.bankAccountId || undefined,
+                    chequeNumber: rest.chequeNumber || undefined,
+                    transactionReference: rest.paymentReference || undefined,
+                    paymentDate: grn.receiptDate || new Date(),
+                    status: 'confirmed',
+                    notes: `Payment on GRN ${grn.grnNumber} (Bill ${createdBill.billNumber})`,
+                    allocations,
+                    createdBy: req.user._id,
+                });
+
+                await payment.save({ session });
+            }
         });
 
         const populated = await GoodsReceiptNote.findById(grn._id)
@@ -149,7 +297,12 @@ export const createGrn = asyncHandler(async (req, res) => {
             .populate('warehouseId', 'name warehouseCode')
             .populate('items.productId', 'name productCode');
 
-        res.status(201).json({ success: true, message: 'Goods received and stock updated', data: populated });
+        res.status(201).json({
+            success: true,
+            message: 'Goods received, Bill generated, and stock updated successfully',
+            data: populated,
+            bill: createdBill,
+        });
     } catch (err) {
         res.status(400);
         throw new Error(err.message || 'Failed to create GRN');
@@ -253,6 +406,12 @@ export const cancelGrn = asyncHandler(async (req, res) => {
                     await po.save({ session });
                 }
             }
+
+            // 3. Cancel linked Bill
+            await Bill.updateMany(
+                { grnIds: grn._id },
+                { status: 'cancelled', paymentStatus: 'cancelled' }
+            ).session(session);
 
             grn.status = 'cancelled';
             grn.cancelledAt = new Date();

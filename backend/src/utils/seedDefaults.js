@@ -4,6 +4,7 @@ import CustomerGroup from '../models/CustomerGroup.js';
 import Warehouse from '../models/Warehouse.js';
 import Holiday from '../models/Holiday.js';
 import User from '../models/User.js';
+import Customer from '../models/Customer.js';
 
 const defaultUoms = [
     { name: 'Piece', symbol: 'pc', type: 'count' },
@@ -162,6 +163,20 @@ const seedAdminUser = async () => {
 // In your main seedDefaults function, add:
 // await seedSriLankaHolidays();
 
+const seedWalkinCustomer = async () => {
+    const existing = await Customer.findOne({ displayName: 'Walk-in Customer' });
+    if (!existing) {
+        await Customer.create({
+            displayName: 'Walk-in Customer',
+            customerCode: 'CUST-WALKIN',
+            customerType: 'individual',
+            businessType: 'retailer',
+            primaryContact: { name: 'Walk-in Customer', phone: '0000000000' },
+        });
+        console.log('✓ Seeded default Walk-in Customer');
+    }
+};
+
 export const seedDefaults = async () => {
     try {
         const uomCount = await UnitOfMeasure.countDocuments();
@@ -191,6 +206,7 @@ export const seedDefaults = async () => {
 
         await seedAdminUser();
         await seedSriLankaHolidays();
+        await seedWalkinCustomer();
 
     } catch (error) {
         console.error('Seed error:', error.message);

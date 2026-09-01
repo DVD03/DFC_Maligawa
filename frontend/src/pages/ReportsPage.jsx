@@ -44,6 +44,7 @@ const reportGroups = [
         category: 'Financial',
         color: 'text-emerald-600', bg: 'bg-emerald-50',
         reports: [
+            { title: 'Profit & Loss Statement', description: 'Daily, weekly & category-wise net profit, COGS, labor & expenses', path: '/reports/profit-loss', icon: TrendingUp },
             { title: 'Financial Snapshot', description: 'Revenue vs expenses, A/R + A/P aging, cash flow', path: '/reports/financial', icon: DollarSign },
         ],
     },

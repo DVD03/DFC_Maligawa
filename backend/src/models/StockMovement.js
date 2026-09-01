@@ -32,6 +32,10 @@ const stockMovementSchema = new mongoose.Schema(
                 'supplier_return',
                 'repair_in',
                 'write_off',
+                'bakery_receipt',
+                'bakery_return',
+                'pack_breakdown_in',
+                'pack_breakdown_out',
             ],
         },
 
@@ -59,6 +63,7 @@ const stockMovementSchema = new mongoose.Schema(
                     'sales_order', 'opening_stock', 'stock_transfer', 'stock_adjustment',
                     'manual', 'purchase_receipt', 'grn', 'supplier_return',
                     'production_order', 'customer_return', 'damage_record', 'repair_order',
+                    'bakery_entry', 'pack_breakdown',
                 ],
             },
             id: { type: mongoose.Schema.Types.ObjectId },

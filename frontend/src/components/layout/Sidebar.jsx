@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, BarChart3, Package, ShoppingCart, Users, Settings,
     FolderTree, Award, UserCircle, Tags, Warehouse, Boxes, Truck,
     ShoppingBag, FileText, Receipt, Wallet, Workflow, Factory, ShieldCheck,
     RotateCcw, Wrench, AlertTriangle, FileMinus, X, Users as UsersIcon, Building2, Clock, Calendar as CalendarIcon, Plane, Calculator, DollarSign,
-    Landmark, FileCheck, PackageCheck, ArrowRightLeft, ChevronDown, ChevronRight, Plus, PanelLeftClose
+    Landmark, FileCheck, PackageCheck, ArrowRightLeft, ChevronDown, ChevronRight, Plus, PanelLeftClose, Coffee, Search
 } from 'lucide-react';
 
 // ── Menu structure ──────────────────────────────────────────────────
@@ -15,6 +15,19 @@ const menuItems = [
         id: 'dashboard',
         icon: LayoutDashboard,
         path: '/dashboard',
+    },
+    {
+        label: 'Bakery & Short Eats',
+        id: 'bakery',
+        icon: Coffee,
+        children: [
+            { label: 'Daily Stock Receiving', path: '/bakery/daily-receiving' },
+            { label: 'Bakery Stock Levels', path: '/bakery/stock' },
+            { label: 'Bakery Suppliers', path: '/bakery/suppliers' },
+            { label: 'Supplier Templates', path: '/bakery/templates' },
+            { label: 'Settlement Ledger', path: '/bakery/history' },
+            { label: 'Profit & Loss (Net Profit)', path: '/reports/profit-loss' },
+        ],
     },
     {
         label: 'People',
@@ -52,6 +65,7 @@ const menuItems = [
             { label: 'Categories', path: '/categories' },
             { label: 'Brands', path: '/brands' },
             { label: 'Stock Levels', path: '/stock' },
+            { label: 'Pack Breakdown (Unpack)', path: '/stock/pack-breakdown' },
             { label: 'Opening Stock', path: '/stock/opening' },
             { label: 'Warehouses', path: '/warehouses' },
             { label: 'Stock Transfers', path: '/stock/transfer' },
@@ -66,6 +80,7 @@ const menuItems = [
         id: 'procurement',
         icon: ShoppingBag,
         children: [
+            { label: 'Suppliers Directory', path: '/suppliers' },
             { label: 'Purchase Orders', path: '/purchase-orders' },
             { label: 'Goods Received (GRN)', path: '/grns' },
             { label: 'Supplier Returns', path: '/supplier-returns' },
@@ -82,6 +97,7 @@ const menuItems = [
             { label: 'Fund Transfers', path: '/fund-transfers' },
             { label: 'Cheque Registry', path: '/cheques' },
             { label: 'Credit Notes', path: '/credit-notes' },
+            { label: 'Profit & Loss (Net Profit)', path: '/reports/profit-loss' },
         ],
     },
     {
@@ -105,15 +121,20 @@ const menuItems = [
             { label: 'Attendance', path: '/attendance' },
             { label: 'Leave Requests', path: '/leaves' },
             { label: 'Holidays', path: '/holidays' },
+            { label: 'Wages & Advances', path: '/hr/wages' },
             { label: 'Salary Structures', path: '/salary-structures' },
             { label: 'Payroll Management', path: '/payroll' },
         ],
     },
     {
-        label: 'Analytics',
+        label: 'Analytics & Reports',
         id: 'analytics',
         icon: BarChart3,
-        path: '/reports',
+        children: [
+            { label: 'Reports Hub', path: '/reports' },
+            { label: 'Profit & Loss (Net Profit)', path: '/reports/profit-loss' },
+            { label: 'Financial Snapshot', path: '/reports/financial-snapshot' },
+        ],
     },
     {
         label: 'Settings',
@@ -165,7 +186,33 @@ export default function Sidebar({ userRole, isOpen, onClose }) {
         .filter(item => !item.children || item.children.length > 0);
 
     const [isNewMenuOpen, setIsNewMenuOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const newMenuRef = useRef(null);
+
+    const query = searchQuery.trim().toLowerCase();
+
+    const filteredMenuItems = useMemo(() => {
+        if (!query) return visibleItems;
+
+        return visibleItems
+            .map((item) => {
+                const parentMatches = item.label.toLowerCase().includes(query);
+                if (item.children) {
+                    const matchingChildren = item.children.filter((child) =>
+                        child.label.toLowerCase().includes(query)
+                    );
+                    if (parentMatches || matchingChildren.length > 0) {
+                        return {
+                            ...item,
+                            children: parentMatches ? item.children : matchingChildren,
+                        };
+                    }
+                    return null;
+                }
+                return parentMatches ? item : null;
+            })
+            .filter(Boolean);
+    }, [visibleItems, query]);
 
     // Close new menu when clicking outside
     useEffect(() => {
@@ -189,20 +236,24 @@ export default function Sidebar({ userRole, isOpen, onClose }) {
         <>
             {/* Backdrop overlay (mobile layer) */}
             {isOpen && (
-                <div className="fixed inset-0 bg-gray-900/10 backdrop-blur-[2px] z-30 lg:hidden" />
+                <div 
+                    onClick={onClose}
+                    className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+                    aria-hidden="true"
+                />
             )}
 
             {/* Sidebar panel */}
             <aside
                 ref={sidebarRef}
-                className={`h-screen bg-white border-r border-gray-100 flex flex-col z-40 shadow-sm transition-all duration-300 ease-in-out
+                className={`h-screen bg-white border-r border-gray-100 flex flex-col z-50 shadow-xl lg:shadow-sm transition-all duration-300 ease-in-out
                     ${isOpen ? 'translate-x-0 w-[280px]' : '-translate-x-full lg:translate-x-0 w-0'} 
                     fixed lg:relative inset-y-0 left-0`}
                 style={{
                     width: isOpen ? '280px' : '0px',
                     minWidth: isOpen ? '280px' : '0px',
                     overflow: 'hidden',
-                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     flexShrink: 0,
                 }}
             >
@@ -215,7 +266,7 @@ export default function Sidebar({ userRole, isOpen, onClose }) {
                                 <Package className="w-6 h-6 text-white" />
                             </div>
                             <div className="flex items-center gap-2">
-                                <h2 className="font-bold text-gray-900 text-xl tracking-tight">RC Traders</h2>
+                                <h2 className="font-bold text-gray-900 text-xl tracking-tight">Dinesh Food Court</h2>
                             </div>
                         </div>
                         <button
@@ -227,7 +278,7 @@ export default function Sidebar({ userRole, isOpen, onClose }) {
                     </div>
 
                     {/* ── Quick Action ── */}
-                    <div className="px-6 mb-4 relative" ref={newMenuRef}>
+                    <div className="px-6 mb-3 relative" ref={newMenuRef}>
                         <button 
                             onClick={() => setIsNewMenuOpen(!isNewMenuOpen)}
                             className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl shadow-sm text-sm font-medium transition-all group ${
@@ -261,70 +312,110 @@ export default function Sidebar({ userRole, isOpen, onClose }) {
                         )}
                     </div>
 
+                    {/* ── Menu Search Input ── */}
+                    <div className="px-6 mb-3">
+                        <div className="relative flex items-center">
+                            <Search className="absolute left-3 w-4 h-4 text-gray-400 pointer-events-none" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search menu & pages..."
+                                className="w-full pl-9 pr-8 py-2 bg-gray-50 hover:bg-gray-100/70 focus:bg-white border border-gray-200/80 rounded-xl text-xs font-medium text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                            />
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute right-2.5 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-200/60 rounded-full transition-colors"
+                                    title="Clear search"
+                                >
+                                    <X size={12} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
                     {/* ── Scrollable nav ── */}
                     <nav className="flex-1 overflow-y-auto py-2 px-4 custom-scrollbar space-y-1">
-                        {visibleItems.map((item) => {
-                            const Icon = item.icon;
-                            const isExpanded = expandedItems[item.id];
-                            const isActive = location.pathname === item.path || isChildActive(item);
-                            const hasChildren = item.children && item.children.length > 0;
+                        {filteredMenuItems.length === 0 ? (
+                            <div className="py-8 px-4 text-center space-y-2 text-gray-400">
+                                <Search className="w-8 h-8 mx-auto text-gray-300 stroke-[1.5]" />
+                                <p className="text-xs font-medium text-gray-600">No menu items match "{searchQuery}"</p>
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchQuery('')}
+                                    className="text-xs font-semibold text-indigo-600 hover:underline"
+                                >
+                                    Clear search
+                                </button>
+                            </div>
+                        ) : (
+                            filteredMenuItems.map((item) => {
+                                const Icon = item.icon;
+                                const isExpanded = !!query || expandedItems[item.id];
+                                const isActive = location.pathname === item.path || isChildActive(item);
+                                const hasChildren = item.children && item.children.length > 0;
 
-                            return (
-                                <div key={item.id} className="space-y-1">
-                                    {hasChildren ? (
-                                        <button
-                                            onClick={() => toggleExpand(item.id)}
-                                            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group relative ${isActive
-                                                    ? 'bg-gray-100 text-gray-900'
-                                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                                                }`}
-                                        >
-                                            {isActive && (
-                                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-600 rounded-r-full" />
-                                            )}
-                                            <Icon size={18} className={`flex-shrink-0 ${isActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-                                            <span className="truncate">{item.label}</span>
-                                            <div className="ml-auto">
-                                                {isExpanded ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />}
+                                return (
+                                    <div key={item.id} className="space-y-1">
+                                        {hasChildren ? (
+                                            <button
+                                                onClick={() => toggleExpand(item.id)}
+                                                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group relative ${isActive
+                                                        ? 'bg-gray-100 text-gray-900'
+                                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {isActive && (
+                                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-600 rounded-r-full" />
+                                                )}
+                                                <Icon size={18} className={`flex-shrink-0 ${isActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                                                <span className="truncate">{item.label}</span>
+                                                <div className="ml-auto">
+                                                    {isExpanded ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />}
+                                                </div>
+                                            </button>
+                                        ) : (
+                                            <NavLink
+                                                to={item.path}
+                                                onClick={() => { if (window.innerWidth < 1024) onClose?.(); }}
+                                                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group relative ${location.pathname === item.path
+                                                        ? 'bg-gray-100 text-gray-900'
+                                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {location.pathname === item.path && (
+                                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-600 rounded-r-full" />
+                                                )}
+                                                <Icon size={18} className={`flex-shrink-0 ${location.pathname === item.path ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                                                <span className="truncate">{item.label}</span>
+                                            </NavLink>
+                                        )}
+
+                                        {hasChildren && isExpanded && (
+                                            <div className="ml-9 space-y-1 mt-1 border-l border-gray-100">
+                                                {item.children.map((child) => (
+                                                    <NavLink
+                                                        key={child.path}
+                                                        to={child.path}
+                                                        onClick={() => { if (window.innerWidth < 1024) onClose?.(); }}
+                                                        className={({ isActive }) =>
+                                                            `block px-4 py-2 text-sm font-medium rounded-lg transition-all ${isActive
+                                                                ? 'text-indigo-600'
+                                                                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                                                            }`
+                                                        }
+                                                    >
+                                                        {child.label}
+                                                    </NavLink>
+                                                ))}
                                             </div>
-                                        </button>
-                                    ) : (
-                                        <NavLink
-                                            to={item.path}
-                                            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group relative ${location.pathname === item.path
-                                                    ? 'bg-gray-100 text-gray-900'
-                                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                                                }`}
-                                        >
-                                            {location.pathname === item.path && (
-                                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-600 rounded-r-full" />
-                                            )}
-                                            <Icon size={18} className={`flex-shrink-0 ${location.pathname === item.path ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
-                                            <span className="truncate">{item.label}</span>
-                                        </NavLink>
-                                    )}
-
-                                    {hasChildren && isExpanded && (
-                                        <div className="ml-9 space-y-1 mt-1 border-l border-gray-100">
-                                            {item.children.map((child) => (
-                                                <NavLink
-                                                    key={child.path}
-                                                    to={child.path}
-                                                    className={({ isActive }) =>
-                                                        `block px-4 py-2 text-sm font-medium rounded-lg transition-all ${isActive
-                                                            ? 'text-indigo-600'
-                                                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-                                                        }`
-                                                    }
-                                                >
-                                                    {child.label}
-                                                </NavLink>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
                     </nav>
 
                     {/* ── User Profile / Footer ── */}

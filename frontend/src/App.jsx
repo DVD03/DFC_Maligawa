@@ -63,6 +63,14 @@ import RepairDetailPage from './pages/RepairDetailPage';
 import PosPage from './pages/PosPage';
 import PosSessionsPage from './pages/PosSessionsPage';
 
+import BakeryDailyReceivingPage from './pages/BakeryDailyReceivingPage';
+import BakerySuppliersPage from './pages/BakerySuppliersPage';
+import BakeryTemplatesPage from './pages/BakeryTemplatesPage';
+import BakeryHistoryPage from './pages/BakeryHistoryPage';
+import BakeryStockPage from './pages/BakeryStockPage';
+import PackBreakdownPage from './pages/PackBreakdownPage';
+import EmployeeWagesPage from './pages/EmployeeWagesPage';
+
 import EmployeesPage from './pages/EmployeesPage';
 import EmployeeFormPage from './pages/EmployeeFormPage';
 import EmployeeDetailPage from './pages/EmployeeDetailPage';
@@ -79,6 +87,7 @@ import PayslipDetailPage from './pages/PayslipDetailPage';
 
 import ReportsPage from './pages/ReportsPage';
 import FinancialReportPage from './pages/FinancialReportPage';
+import ProfitLossReportPage from './pages/reports/ProfitLossReportPage';
 import SalesSummaryReportPage from './pages/reports/SalesSummaryReportPage';
 import SalesByProductReportPage from './pages/reports/SalesByProductReportPage';
 import SalesByCustomerReportPage from './pages/reports/SalesByCustomerReportPage';
@@ -141,7 +150,15 @@ function App() {
         <Route path="/stock/transfer" element={<StockTransferPage />} />
         <Route path="/stock/adjustment" element={<StockAdjustmentPage />} />
         <Route path="/stock/movements" element={<StockMovementsPage />} />
+        <Route path="/stock/pack-breakdown" element={<PackBreakdownPage />} />
         <Route path="/damages" element={<DamagesPage />} />
+
+        {/* Bakery & Short Eats */}
+        <Route path="/bakery/daily-receiving" element={<BakeryDailyReceivingPage />} />
+        <Route path="/bakery/stock" element={<BakeryStockPage />} />
+        <Route path="/bakery/suppliers" element={<BakerySuppliersPage />} />
+        <Route path="/bakery/templates" element={<BakeryTemplatesPage />} />
+        <Route path="/bakery/history" element={<BakeryHistoryPage />} />
         <Route path="/suppliers" element={<SuppliersPage />} />
         <Route path="/supplier-returns" element={<SupplierReturnsPage />} />
         <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
@@ -191,12 +208,14 @@ function App() {
         <Route path="/leaves" element={<LeaveRequestsPage />} />
         <Route path="/holidays" element={<HolidaysPage />} />
         <Route path="/salary-structures" element={<SalaryStructuresPage />} />
+        <Route path="/hr/wages" element={<EmployeeWagesPage />} />
         <Route path="/payroll" element={<PayrollsPage />} />
         <Route path="/payroll/:id" element={<PayrollDetailPage />} />
         <Route path="/payroll/:payrollId/payslip/:employeeId" element={<PayslipDetailPage />} />
 
         <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/reports/financial" element={<FinancialReportPage />} />
+        <Route path="/reports/profit-loss" element={<ProfitLossReportPage />} />
+        <Route path="/reports/financial" element={<ProfitLossReportPage />} />
         <Route path="/reports/sales" element={<SalesSummaryReportPage />} />
         <Route path="/reports/sales-by-product" element={<SalesByProductReportPage />} />
         <Route path="/reports/sales-by-customer" element={<SalesByCustomerReportPage />} />

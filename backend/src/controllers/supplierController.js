@@ -1,5 +1,57 @@
 import asyncHandler from 'express-async-handler';
+import mongoose from 'mongoose';
 import Supplier from '../models/Supplier.js';
+import Bill from '../models/Bill.js';
+import Payment from '../models/Payment.js';
+import BakeryDailyEntry from '../models/BakeryDailyEntry.js';
+
+export const getSupplierBalance = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    if (!id || !mongoose.isValidObjectId(id)) {
+        res.status(400);
+        throw new Error('Valid supplier ID required');
+    }
+
+    const supplier = await Supplier.findById(id);
+    if (!supplier) {
+        res.status(404);
+        throw new Error('Supplier not found');
+    }
+
+    // 1. Unpaid / partially paid bills
+    const unpaidBills = await Bill.find({
+        supplierId: id,
+        status: { $ne: 'cancelled' },
+        paymentStatus: { $in: ['unpaid', 'partially_paid', 'overdue'] },
+    }).sort({ billDate: 1 }).lean();
+
+    const totalBillsBalance = unpaidBills.reduce((s, b) => s + (b.balanceDue || 0), 0);
+
+    // 2. Bakery balance if bakery supplier
+    let bakeryBalance = 0;
+    const lastBakeryEntry = await BakeryDailyEntry.findOne({ supplierId: id, status: { $ne: 'cancelled' } })
+        .sort({ entryDate: -1, createdAt: -1 })
+        .lean();
+    if (lastBakeryEntry && lastBakeryEntry.financials?.closingBalance != null) {
+        bakeryBalance = lastBakeryEntry.financials.closingBalance;
+    }
+
+    // Total outstanding balance (all unpaid bills + bakery entries)
+    const effectiveOutstanding = Math.max(totalBillsBalance, bakeryBalance);
+
+    res.json({
+        success: true,
+        data: {
+            supplierId: id,
+            supplierName: supplier.displayName,
+            outstandingBalance: +effectiveOutstanding.toFixed(2),
+            unpaidBillsCount: unpaidBills.length,
+            totalBillsBalance: +totalBillsBalance.toFixed(2),
+            bakeryBalance: +bakeryBalance.toFixed(2),
+            unpaidBills,
+        },
+    });
+});
 
 export const createSupplier = asyncHandler(async (req, res) => {
     const payload = { ...req.body, createdBy: req.user._id };
@@ -24,7 +76,13 @@ export const getSuppliers = asyncHandler(async (req, res) => {
             { 'primaryContact.phone': { $regex: search, $options: 'i' } },
         ];
     }
-    if (category) filter.category = category;
+    if (category) {
+        if (category === 'general') {
+            filter.category = { $ne: 'bakery_short_eats' };
+        } else {
+            filter.category = category;
+        }
+    }
     if (status) filter.status = status;
 
     const skip = (Number(page) - 1) * Number(limit);
@@ -46,6 +104,11 @@ export const getSuppliers = asyncHandler(async (req, res) => {
 });
 
 export const getSupplierById = asyncHandler(async (req, res) => {
+    if (!req.params.id || req.params.id === 'undefined' || !mongoose.isValidObjectId(req.params.id)) {
+        res.status(404);
+        throw new Error('Valid supplier ID required');
+    }
+
     const supplier = await Supplier.findById(req.params.id)
         .populate('createdBy', 'firstName lastName')
         .populate('updatedBy', 'firstName lastName');

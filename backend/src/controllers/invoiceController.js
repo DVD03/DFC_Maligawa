@@ -52,8 +52,19 @@ const updateCustomerBalance = async (customerId, session) => {
 export const createInvoice = asyncHandler(async (req, res) => {
     const { customerId, items, dueDate, ...rest } = req.body;
 
-    const customer = await Customer.findById(customerId);
-    if (!customer) { res.status(404); throw new Error('Customer not found'); }
+    let customer = customerId ? await Customer.findById(customerId) : null;
+    if (!customer) {
+        customer = await Customer.findOne({ displayName: 'Walk-in Customer' });
+        if (!customer) {
+            customer = await Customer.create({
+                displayName: 'Walk-in Customer',
+                customerCode: 'CUST-WALKIN',
+                customerType: 'individual',
+                businessType: 'retailer',
+                primaryContact: { name: 'Walk-in Customer', phone: '0000000000' },
+            });
+        }
+    }
 
     // Auto-calc due date if not provided
     let finalDueDate = dueDate;
@@ -454,7 +465,7 @@ export const getInvoicePrintJson = asyncHandler(async (req, res) => {
     }
 
     const settings = (await CompanySettings.findOne()) || {
-        companyName: 'RC TRADERS',
+        companyName: 'DINESH FOOD COURT',
         address: 'Colombo, Sri Lanka',
         phone: '+94 11 XXX XXXX',
         receiptFooterMessage: 'THANK YOU FOR YOUR BUSINESS!\nPLEASE VISIT AGAIN.'

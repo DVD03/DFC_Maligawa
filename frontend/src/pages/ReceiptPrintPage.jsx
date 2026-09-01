@@ -195,12 +195,6 @@ export default function ReceiptPrintPage() {
                             <span>-{fmt(discount)}</span>
                         </div>
                     )}
-                    {invoice.totalTax > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px', color: '#555' }}>
-                            <span>Tax</span>
-                            <span>{fmt(invoice.totalTax)}</span>
-                        </div>
-                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: '900', textTransform: 'uppercase', borderTop: '2px solid #000', paddingTop: '5px', marginTop: '5px' }}>
                         <span>Total</span>
                         <span>{fmt(invoice.grandTotal)}</span>

@@ -17,8 +17,14 @@ export const useCreatePayment = () => {
             qc.invalidateQueries({ queryKey: ['invoices'] });
             qc.invalidateQueries({ queryKey: ['invoicesAging'] });
             qc.invalidateQueries({ queryKey: ['bills'] });
+            qc.invalidateQueries({ queryKey: ['payablesAging'] });
             qc.invalidateQueries({ queryKey: ['customers'] });
+            qc.invalidateQueries({ queryKey: ['suppliers'] });
+            qc.invalidateQueries({ queryKey: ['supplier-balance'] });
+            qc.invalidateQueries({ queryKey: ['bank-accounts'] });
             qc.invalidateQueries({ queryKey: ['dashboard'] });
+            qc.invalidateQueries({ queryKey: ['financial-pnl'] });
+            qc.invalidateQueries({ queryKey: ['financialReports'] });
             toast.success('Payment recorded');
         },
         onError: (err) => toast.error(err.response?.data?.message || 'Failed'),
@@ -34,9 +40,16 @@ export const useDeletePayment = () => {
             qc.invalidateQueries({ queryKey: ['invoices'] });
             qc.invalidateQueries({ queryKey: ['invoicesAging'] });
             qc.invalidateQueries({ queryKey: ['bills'] });
+            qc.invalidateQueries({ queryKey: ['payablesAging'] });
+            qc.invalidateQueries({ queryKey: ['customers'] });
+            qc.invalidateQueries({ queryKey: ['suppliers'] });
+            qc.invalidateQueries({ queryKey: ['supplier-balance'] });
             qc.invalidateQueries({ queryKey: ['bank-accounts'] });
             qc.invalidateQueries({ queryKey: ['cheques'] });
-            toast.success('Payment deleted');
+            qc.invalidateQueries({ queryKey: ['dashboard'] });
+            qc.invalidateQueries({ queryKey: ['financial-pnl'] });
+            qc.invalidateQueries({ queryKey: ['financialReports'] });
+            toast.success('Payment deleted & balances restored');
         },
         onError: (err) => toast.error(err.response?.data?.message || 'Delete failed'),
     });

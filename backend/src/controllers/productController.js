@@ -44,6 +44,9 @@ export const getProducts = asyncHandler(async (req, res) => {
         brandId,
         status,
         type,
+        canBeSold,
+        isBakeryItem,
+        includeBakery,
         minPrice,
         maxPrice,
         page = 1,
@@ -53,6 +56,17 @@ export const getProducts = asyncHandler(async (req, res) => {
     } = req.query;
 
     const filter = {};
+
+    // By default, exclude bakery items from the general Products catalog unless explicitly requested (e.g. for POS)
+    if (isBakeryItem !== undefined) {
+        filter.isBakeryItem = isBakeryItem === 'true';
+    } else if (includeBakery !== 'true') {
+        filter.isBakeryItem = { $ne: true };
+    }
+
+    if (canBeSold !== undefined) {
+        filter.canBeSold = canBeSold === 'true';
+    }
 
     if (search) {
         filter.$or = [

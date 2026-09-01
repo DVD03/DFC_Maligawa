@@ -145,6 +145,7 @@ export default function SupplierFormModal({ isOpen, onClose, supplier = null }) 
                                     {...register('type')} />
                                 <Select label="Category" required
                                     options={[
+                                        { value: 'bakery_short_eats', label: '🥐 Bakery & Short Eats' },
                                         { value: 'raw_material', label: 'Raw Material' },
                                         { value: 'packaging', label: 'Packaging' },
                                         { value: 'finished_goods', label: 'Finished Goods' },

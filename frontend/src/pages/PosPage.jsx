@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import {
     Search, Plus, Minus, Trash2, ShoppingCart, Save, X,
     Package, AlertCircle, UserPlus, PackagePlus, CreditCard,
-    CheckCircle, ArrowLeft, LayoutGrid, List
+    CheckCircle, ArrowLeft, LayoutGrid, List,
+    Banknote, QrCode, Split, Zap, DollarSign, Wallet, FileText, ArrowRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -62,13 +63,17 @@ export default function PosPage() {
     const [orderDiscountAmount, setOrderDiscountAmount] = useState(0);
     const createCustomer = useCreateCustomer();
 
-    // Modals
+    // Payment Modals & Options
     const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
     const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
     const [isCloseRegisterModalOpen, setIsCloseRegisterModalOpen] = useState(false);
     const [isCalculatorModalOpen, setIsCalculatorModalOpen] = useState(false);
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash'); // 'cash' | 'card' | 'qr' | 'credit' | 'split'
     const [calculatorCashReceived, setCalculatorCashReceived] = useState('');
     const [calculatorChangeReturned, setCalculatorChangeReturned] = useState(0);
+    const [cardRefNumber, setCardRefNumber] = useState('');
+    const [splitCashAmount, setSplitCashAmount] = useState('');
+    const [splitCardAmount, setSplitCardAmount] = useState('');
 
     // Direct Printing
     const [recentInvoice, setRecentInvoice] = useState(null);
@@ -88,7 +93,7 @@ export default function PosPage() {
     });
     const { data: productsData } = useQuery({
         queryKey: ['products', 'active', 'pos'],
-        queryFn: () => productsApi.list({ status: 'active', canBeSold: true, limit: 500 }),
+        queryFn: () => productsApi.list({ status: 'active', canBeSold: true, limit: 500, includeBakery: true }),
     });
     const { data: categoriesData } = useCategories({ isActive: 'true' });
     const { data: stockData } = useQuery({
@@ -297,7 +302,7 @@ export default function PosPage() {
 
     const fmt = (n) => new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR', minimumFractionDigits: 2 }).format(n || 0);
 
-    const handleCheckout = async (saveAsDraft = false, cashAmt = null, changeAmt = null) => {
+    const handleCheckout = async (saveAsDraft = false, method = 'cash', cashAmt = null, changeAmt = null, reference = '', cashSplit = 0) => {
         let finalCustomerId = customerId;
 
         // Auto-add customer if not selected but name typed
@@ -320,12 +325,17 @@ export default function PosPage() {
             }
         }
 
-        if (!finalCustomerId) { toast.error('Select or type a customer'); return; }
+        if (!finalCustomerId) {
+            const walkin = customers.find((c) => c.displayName === 'Walk-in Customer' || c.customerCode === 'CUST-WALKIN');
+            if (walkin) finalCustomerId = walkin._id;
+        }
+
         if (!sourceWarehouseId) { toast.error('Select a warehouse'); return; }
         if (cart.length === 0) { toast.error('Cart is empty'); return; }
         if (!activeSession) { toast.error('You must open the cash register first'); setIsSessionModalOpen(true); return; }
 
-        if (!saveAsDraft && cashAmt === null) {
+        if (!saveAsDraft && cashAmt === null && method === 'cash') {
+            setSelectedPaymentMethod('cash');
             setCalculatorCashReceived('');
             setCalculatorChangeReturned(0);
             setIsCalculatorModalOpen(true);
@@ -341,13 +351,18 @@ export default function PosPage() {
                 orderedQuantity: i.qty,
                 unitPrice: i.price,
                 discountPercent: 0,
+                taxRate: 0,
+                taxable: false,
             })),
             orderDiscount: (orderDiscountPercent > 0 || orderDiscountAmount > 0)
                 ? { type: 'fixed', value: totals.orderDiscount }
                 : undefined,
             status: saveAsDraft ? 'draft' : 'approved',
-            cashReceived: saveAsDraft ? undefined : (cashAmt || 0),
+            paymentMethod: method,
+            cashReceived: saveAsDraft ? undefined : (cashAmt !== null ? cashAmt : (method === 'cash' ? totals.grandTotal : undefined)),
             changeReturned: saveAsDraft ? undefined : (changeAmt || 0),
+            paymentReference: reference || undefined,
+            cashAmount: method === 'split' ? cashSplit : undefined,
         };
 
         try {
@@ -368,7 +383,7 @@ export default function PosPage() {
                     }
                 }
 
-                toast.success('Sale complete! Invoice generated.');
+                toast.success('Sale complete! Receipt generated.');
                 setCart([]);
                 setCustomerId('');
                 setCustomerSearch('');
@@ -419,7 +434,7 @@ export default function PosPage() {
                         <div className="flex-1 relative">
                             <input
                                 type="text"
-                                placeholder="Customer Name..."
+                                placeholder="Customer Name (Optional / Walk-in)..."
                                 className="w-full px-3 py-2.5 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 outline-none border-gray-200 shadow-sm transition-all"
                                 value={customerId ? selectedCustomer?.displayName : customerSearch}
                                 onChange={(e) => {
@@ -791,18 +806,51 @@ export default function PosPage() {
                         </div>
 
                         <div className="flex justify-between pt-3 border-t border-gray-200">
-                            <span className="font-bold text-gray-900">Total</span>
+                            <span className="font-bold text-gray-900">Total Payable</span>
                             <span className="text-xl font-black text-primary-600 leading-none">{fmt(totals.grandTotal)}</span>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 pt-1">
-                            <Button variant="outline" onClick={() => handleCheckout(true)}
-                                disabled={cart.length === 0 || (!customerId && !customerSearch)} loading={createOrder.isPending}>
+                        <div className="grid grid-cols-3 gap-1.5 pt-1">
+                            <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleCheckout(true)}
+                                disabled={cart.length === 0} 
+                                loading={createOrder.isPending}
+                                className="py-2.5 text-xs text-slate-600"
+                            >
                                 <Save size={14} className="mr-1" /> Draft
                             </Button>
-                            <Button variant="primary" onClick={() => handleCheckout(false)}
-                                disabled={cart.length === 0 || (!customerId && !customerSearch)} loading={createOrder.isPending}>
-                                <CreditCard size={14} className="mr-1" /> Checkout
+                            
+                            <Button 
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleCheckout(false, 'cash', totals.grandTotal, 0)}
+                                disabled={cart.length === 0} 
+                                loading={createOrder.isPending}
+                                className="py-2.5 text-xs font-bold bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+                                title="Instant 1-click checkout with exact cash"
+                            >
+                                <Zap size={14} className="mr-1 text-emerald-600 fill-emerald-600" /> Cash (Exact)
+                            </Button>
+
+                            <Button 
+                                variant="primary" 
+                                size="sm"
+                                onClick={() => {
+                                    setSelectedPaymentMethod('cash');
+                                    setCalculatorCashReceived('');
+                                    setCalculatorChangeReturned(0);
+                                    setCardRefNumber('');
+                                    setSplitCashAmount('');
+                                    setSplitCardAmount('');
+                                    setIsCalculatorModalOpen(true);
+                                }}
+                                disabled={cart.length === 0} 
+                                loading={createOrder.isPending}
+                                className="py-2.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white"
+                            >
+                                <CreditCard size={14} className="mr-1" /> Pay / Options
                             </Button>
                         </div>
                     </div>
@@ -840,114 +888,384 @@ export default function PosPage() {
             <PosSessionModal isOpen={isSessionModalOpen} onClose={() => setIsSessionModalOpen(false)} />
             <CloseRegisterModal isOpen={isCloseRegisterModalOpen} onClose={() => setIsCloseRegisterModalOpen(false)} session={activeSession} />
 
+            {/* POS Payment Methods & Checkout Modal */}
             <Modal
                 isOpen={isCalculatorModalOpen}
                 onClose={() => setIsCalculatorModalOpen(false)}
-                title="POS Cash Payment Calculator"
-                size="md"
+                title="Select Payment Method & Settle Bill"
+                size="lg"
             >
-                <div className="p-6 space-y-6">
+                <div className="p-6 space-y-5">
                     {/* Grand Total Display */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100 flex justify-between items-center">
+                    <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-xl p-4 flex justify-between items-center shadow-md">
                         <div>
-                            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Total Payable</p>
-                            <p className="text-3xl font-extrabold text-indigo-950 mt-1">{fmt(totals.grandTotal)}</p>
+                            <p className="text-xs font-semibold text-indigo-300 uppercase tracking-wider">Bill Total Payable</p>
+                            <p className="text-3xl font-black mt-0.5 tracking-tight">{fmt(totals.grandTotal)}</p>
+                            {selectedCustomer && (
+                                <p className="text-xs text-slate-300 mt-1">Customer: <span className="font-bold text-white">{selectedCustomer.displayName}</span></p>
+                            )}
                         </div>
-                        <div className="bg-indigo-500 text-white rounded-lg p-2.5 shadow-md shadow-indigo-200">
-                            <CreditCard size={28} />
-                        </div>
-                    </div>
-
-                    {/* Cash Received Input */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-gray-700">Cash Received (LKR)</label>
-                        <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">Rs.</span>
-                            <input
-                                type="number"
-                                step="any"
-                                autoFocus
-                                placeholder="0.00"
-                                value={calculatorCashReceived}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setCalculatorCashReceived(val);
-                                    const parsed = parseFloat(val) || 0;
-                                    setCalculatorChangeReturned(Math.max(0, parsed - totals.grandTotal));
-                                }}
-                                className="w-full bg-white border border-gray-300 rounded-lg py-3.5 pl-12 pr-4 text-2xl font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm"
-                            />
+                        <div className="bg-white/10 text-white rounded-xl p-3 backdrop-blur-xs">
+                            <Wallet size={32} />
                         </div>
                     </div>
 
-                    {/* Quick Cash Buttons */}
-                    <div className="space-y-2">
-                        <span className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Quick Cash Shortcuts</span>
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setCalculatorCashReceived(totals.grandTotal.toString());
-                                    setCalculatorChangeReturned(0);
-                                }}
-                                className="py-2 px-3 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-lg transition duration-200 border border-gray-200 active:scale-95"
-                            >
-                                Exact Cash
-                            </button>
-                            {[1000, 2000, 5000, 10000].map((denom) => (
+                    {/* Payment Method Tabs */}
+                    <div className="grid grid-cols-5 gap-1.5 p-1 bg-slate-100 rounded-xl">
+                        <button
+                            type="button"
+                            onClick={() => setSelectedPaymentMethod('cash')}
+                            className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col items-center gap-1 transition ${
+                                selectedPaymentMethod === 'cash'
+                                    ? 'bg-white text-emerald-700 shadow-xs'
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <Banknote size={16} />
+                            <span>Cash</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setSelectedPaymentMethod('card')}
+                            className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col items-center gap-1 transition ${
+                                selectedPaymentMethod === 'card'
+                                    ? 'bg-white text-blue-700 shadow-xs'
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <CreditCard size={16} />
+                            <span>Card / POS</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setSelectedPaymentMethod('qr')}
+                            className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col items-center gap-1 transition ${
+                                selectedPaymentMethod === 'qr'
+                                    ? 'bg-white text-purple-700 shadow-xs'
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <QrCode size={16} />
+                            <span>QR / Online</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setSelectedPaymentMethod('credit')}
+                            className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col items-center gap-1 transition ${
+                                selectedPaymentMethod === 'credit'
+                                    ? 'bg-white text-amber-700 shadow-xs'
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <FileText size={16} />
+                            <span>Credit / Later</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSelectedPaymentMethod('split');
+                                setSplitCashAmount((totals.grandTotal / 2).toFixed(2));
+                                setSplitCardAmount((totals.grandTotal / 2).toFixed(2));
+                            }}
+                            className={`py-2 px-1 rounded-lg text-xs font-bold flex flex-col items-center gap-1 transition ${
+                                selectedPaymentMethod === 'split'
+                                    ? 'bg-white text-indigo-700 shadow-xs'
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <Split size={16} />
+                            <span>Split Pay</span>
+                        </button>
+                    </div>
+
+                    {/* METHOD 1: CASH */}
+                    {selectedPaymentMethod === 'cash' && (
+                        <div className="space-y-4">
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                    Cash Tendered / Received (Rs.)
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">Rs.</span>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        autoFocus
+                                        placeholder="0.00"
+                                        value={calculatorCashReceived}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setCalculatorCashReceived(val);
+                                            const parsed = parseFloat(val) || 0;
+                                            setCalculatorChangeReturned(Math.max(0, parsed - totals.grandTotal));
+                                        }}
+                                        className="w-full bg-white border-2 border-emerald-300 rounded-xl py-3 pl-12 pr-4 text-2xl font-bold font-mono text-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Shortcuts */}
+                            <div className="grid grid-cols-5 gap-2">
                                 <button
-                                    key={denom}
                                     type="button"
                                     onClick={() => {
-                                        setCalculatorCashReceived(denom.toString());
-                                        setCalculatorChangeReturned(Math.max(0, denom - totals.grandTotal));
+                                        setCalculatorCashReceived(totals.grandTotal.toString());
+                                        setCalculatorChangeReturned(0);
                                     }}
-                                    className="py-2 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg transition duration-200 border border-indigo-100 active:scale-95"
+                                    className="py-2 px-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition active:scale-95 border border-slate-200"
                                 >
-                                    {denom.toLocaleString('en-LK')}
+                                    Exact Cash
                                 </button>
-                            ))}
-                        </div>
-                    </div>
+                                {[1000, 2000, 5000, 10000].map((denom) => (
+                                    <button
+                                        key={denom}
+                                        type="button"
+                                        onClick={() => {
+                                            setCalculatorCashReceived(denom.toString());
+                                            setCalculatorChangeReturned(Math.max(0, denom - totals.grandTotal));
+                                        }}
+                                        className="py-2 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg transition active:scale-95 border border-emerald-200"
+                                    >
+                                        Rs. {denom.toLocaleString('en-LK')}
+                                    </button>
+                                ))}
+                            </div>
 
-                    {/* Change Returned Display */}
-                    <div className="bg-emerald-50 rounded-xl p-5 border border-emerald-100 flex justify-between items-center">
-                        <div>
-                            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Change to Return</p>
-                            <p className="text-3xl font-extrabold text-emerald-950 mt-1">{fmt(calculatorChangeReturned)}</p>
-                        </div>
-                        <div className="bg-emerald-500 text-white rounded-lg p-2.5 shadow-md shadow-emerald-200">
-                            <CheckCircle size={28} />
-                        </div>
-                    </div>
+                            {/* Change Returned Display */}
+                            <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200 flex justify-between items-center">
+                                <div>
+                                    <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Change to Return to Customer</p>
+                                    <p className="text-3xl font-extrabold text-emerald-950 mt-0.5">{fmt(calculatorChangeReturned)}</p>
+                                </div>
+                                <div className="bg-emerald-600 text-white rounded-xl p-2.5 shadow-sm">
+                                    <CheckCircle size={26} />
+                                </div>
+                            </div>
 
-                    {/* Insufficient Cash Warning */}
-                    {calculatorCashReceived && (parseFloat(calculatorCashReceived) || 0) < totals.grandTotal && (
-                        <div className="flex items-center gap-2 text-sm font-semibold text-red-600 bg-red-50 border border-red-100 rounded-lg p-3">
-                            <AlertCircle size={18} />
-                            <span>Cash received is less than total payable!</span>
+                            {/* Insufficient Cash Warning */}
+                            {calculatorCashReceived && (parseFloat(calculatorCashReceived) || 0) < totals.grandTotal && (
+                                <div className="flex items-center gap-2 text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-2.5">
+                                    <AlertCircle size={16} />
+                                    <span>Cash received is less than total payable!</span>
+                                </div>
+                            )}
+
+                            {/* Submit Cash Button */}
+                            <Button
+                                variant="primary"
+                                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-md flex items-center justify-center gap-2"
+                                disabled={!calculatorCashReceived || (parseFloat(calculatorCashReceived) || 0) < totals.grandTotal || createOrder.isPending}
+                                onClick={async () => {
+                                    setIsCalculatorModalOpen(false);
+                                    await handleCheckout(false, 'cash', parseFloat(calculatorCashReceived), calculatorChangeReturned);
+                                }}
+                            >
+                                {createOrder.isPending ? 'Processing Sale...' : `Confirm Cash Payment (${fmt(totals.grandTotal)})`}
+                            </Button>
                         </div>
                     )}
 
-                    {/* Actions */}
-                    <div className="flex gap-3 pt-2">
+                    {/* METHOD 2: CARD / POS MACHINE */}
+                    {selectedPaymentMethod === 'card' && (
+                        <div className="space-y-4">
+                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 text-blue-900 space-y-2">
+                                <div className="flex items-center gap-2 font-bold text-sm">
+                                    <CreditCard size={18} className="text-blue-600" />
+                                    <span>Card Payment / Bank POS Terminal</span>
+                                </div>
+                                <p className="text-xs text-blue-700 leading-relaxed">
+                                    Swipe, tap or insert Visa / Master / Debit card on the card machine for <strong>{fmt(totals.grandTotal)}</strong>.
+                                </p>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="block text-xs font-bold text-slate-700 uppercase">
+                                    Card Approval Code / Slip Ref # (Optional)
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. AUTH-482910 / Slip # 1042"
+                                    value={cardRefNumber}
+                                    onChange={(e) => setCardRefNumber(e.target.value)}
+                                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white font-mono"
+                                />
+                            </div>
+
+                            <Button
+                                variant="primary"
+                                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md flex items-center justify-center gap-2"
+                                disabled={createOrder.isPending}
+                                onClick={async () => {
+                                    setIsCalculatorModalOpen(false);
+                                    await handleCheckout(false, 'card', totals.grandTotal, 0, cardRefNumber);
+                                }}
+                            >
+                                {createOrder.isPending ? 'Processing...' : `Confirm Card Payment (${fmt(totals.grandTotal)})`}
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* METHOD 3: QR / ONLINE */}
+                    {selectedPaymentMethod === 'qr' && (
+                        <div className="space-y-4">
+                            <div className="bg-purple-50 p-4 rounded-xl border border-purple-200 text-purple-950 space-y-2">
+                                <div className="flex items-center gap-2 font-bold text-sm text-purple-800">
+                                    <QrCode size={18} className="text-purple-600" />
+                                    <span>LankaPay QR / Online Bank App Transfer</span>
+                                </div>
+                                <p className="text-xs text-purple-700 leading-relaxed">
+                                    Customer scans the store LankaQR code or sends online bank transfer of <strong>{fmt(totals.grandTotal)}</strong>.
+                                </p>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="block text-xs font-bold text-slate-700 uppercase">
+                                    QR Transaction Reference # (Optional)
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. TXN-998823 / Reference"
+                                    value={cardRefNumber}
+                                    onChange={(e) => setCardRefNumber(e.target.value)}
+                                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white font-mono"
+                                />
+                            </div>
+
+                            <Button
+                                variant="primary"
+                                className="w-full py-3.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold shadow-md flex items-center justify-center gap-2"
+                                disabled={createOrder.isPending}
+                                onClick={async () => {
+                                    setIsCalculatorModalOpen(false);
+                                    await handleCheckout(false, 'qr', totals.grandTotal, 0, cardRefNumber);
+                                }}
+                            >
+                                {createOrder.isPending ? 'Processing...' : `Confirm QR / Online Transfer (${fmt(totals.grandTotal)})`}
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* METHOD 4: CREDIT / PAY LATER */}
+                    {selectedPaymentMethod === 'credit' && (
+                        <div className="space-y-4">
+                            <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 text-amber-950 space-y-2">
+                                <div className="flex items-center gap-2 font-bold text-sm text-amber-800">
+                                    <FileText size={18} className="text-amber-600" />
+                                    <span>Customer Account Credit (Pay Later)</span>
+                                </div>
+                                <p className="text-xs text-amber-800 leading-relaxed">
+                                    This bill of <strong>{fmt(totals.grandTotal)}</strong> will be charged to the customer's credit ledger.
+                                </p>
+                            </div>
+
+                            {(!customerId && !customerSearch) && (
+                                <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs font-bold text-rose-700">
+                                    ⚠️ Please select or type a Customer Name before completing a credit sale!
+                                </div>
+                            )}
+
+                            <Button
+                                variant="primary"
+                                className="w-full py-3.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold shadow-md flex items-center justify-center gap-2"
+                                disabled={(!customerId && !customerSearch) || createOrder.isPending}
+                                onClick={async () => {
+                                    setIsCalculatorModalOpen(false);
+                                    await handleCheckout(false, 'credit', 0, 0);
+                                }}
+                            >
+                                {createOrder.isPending ? 'Processing...' : `Confirm Credit Sale (${fmt(totals.grandTotal)})`}
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* METHOD 5: SPLIT PAYMENT */}
+                    {selectedPaymentMethod === 'split' && (
+                        <div className="space-y-4">
+                            <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-200 text-indigo-950 text-xs">
+                                Split total payable across <strong>Cash</strong> and <strong>Card/Online</strong>:
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                        Cash Portion (Rs.)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        placeholder="0.00"
+                                        value={splitCashAmount}
+                                        onChange={(e) => {
+                                            const cash = parseFloat(e.target.value) || 0;
+                                            setSplitCashAmount(e.target.value);
+                                            setSplitCardAmount(Math.max(0, +(totals.grandTotal - cash).toFixed(2)).toString());
+                                        }}
+                                        className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-base font-bold font-mono text-emerald-800 bg-white"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                                        Card / Other Portion (Rs.)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        placeholder="0.00"
+                                        value={splitCardAmount}
+                                        onChange={(e) => {
+                                            const card = parseFloat(e.target.value) || 0;
+                                            setSplitCardAmount(e.target.value);
+                                            setSplitCashAmount(Math.max(0, +(totals.grandTotal - card).toFixed(2)).toString());
+                                        }}
+                                        className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-base font-bold font-mono text-blue-800 bg-white"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Split Balance Verification */}
+                            {((parseFloat(splitCashAmount) || 0) + (parseFloat(splitCardAmount) || 0) !== totals.grandTotal) && (
+                                <div className="text-xs font-bold text-rose-600 bg-rose-50 p-2 rounded border border-rose-200">
+                                    Split sum must equal exactly {fmt(totals.grandTotal)}!
+                                </div>
+                            )}
+
+                            <Button
+                                variant="primary"
+                                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-md flex items-center justify-center gap-2"
+                                disabled={
+                                    ((parseFloat(splitCashAmount) || 0) + (parseFloat(splitCardAmount) || 0) !== totals.grandTotal) ||
+                                    createOrder.isPending
+                                }
+                                onClick={async () => {
+                                    setIsCalculatorModalOpen(false);
+                                    await handleCheckout(
+                                        false,
+                                        'split',
+                                        totals.grandTotal,
+                                        0,
+                                        `Split: Cash Rs. ${splitCashAmount} + Card Rs. ${splitCardAmount}`,
+                                        parseFloat(splitCashAmount) || 0
+                                    );
+                                }}
+                            >
+                                {createOrder.isPending ? 'Processing...' : `Confirm Split Payment (${fmt(totals.grandTotal)})`}
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* Modal Cancel Button */}
+                    <div className="pt-2 border-t">
                         <Button
                             variant="outline"
-                            className="flex-1 py-3"
+                            className="w-full py-2.5 text-xs text-slate-500"
                             onClick={() => setIsCalculatorModalOpen(false)}
                         >
                             Cancel
-                        </Button>
-                        <Button
-                            variant="primary"
-                            className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white"
-                            disabled={!calculatorCashReceived || (parseFloat(calculatorCashReceived) || 0) < totals.grandTotal || createOrder.isLoading}
-                            onClick={async () => {
-                                setIsCalculatorModalOpen(false);
-                                await handleCheckout(false, parseFloat(calculatorCashReceived), calculatorChangeReturned);
-                            }}
-                        >
-                            {createOrder.isLoading ? 'Checking out...' : 'Confirm & Pay'}
                         </Button>
                     </div>
                 </div>

@@ -40,7 +40,7 @@ const supplierSchema = new mongoose.Schema(
 
         category: {
             type: String,
-            enum: ['raw_material', 'packaging', 'services', 'equipment', 'finished_goods', 'multiple'],
+            enum: ['bakery_short_eats', 'raw_material', 'packaging', 'services', 'equipment', 'finished_goods', 'multiple'],
             default: 'multiple',
         },
         tags: [{ type: String, trim: true }],

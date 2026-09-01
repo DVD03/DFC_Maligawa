@@ -24,7 +24,7 @@ export const createSupplierSchema = z.object({
     displayName: z.string().min(1, 'Display name required').max(100),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
-    category: z.enum(['raw_material', 'packaging', 'services', 'equipment', 'finished_goods', 'multiple']).optional(),
+    category: z.enum(['bakery_short_eats', 'raw_material', 'packaging', 'services', 'equipment', 'finished_goods', 'multiple']).optional(),
     tags: z.array(z.string()).optional(),
     businessRegistrationNumber: z.string().optional(),
     taxRegistrationNumber: z.string().optional(),

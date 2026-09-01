@@ -37,6 +37,8 @@ export const createSalesOrderSchema = z.object({
     creditOverrideReason: z.string().optional(),
     cashReceived: z.coerce.number().min(0).optional(),
     changeReturned: z.coerce.number().min(0).optional(),
+    paymentMethod: z.enum(['cash', 'card', 'bank_transfer', 'qr', 'credit', 'split', 'other']).optional(),
+    cashAmount: z.coerce.number().min(0).optional(),
 });
 
 export const updateSalesOrderSchema = createSalesOrderSchema.partial();

@@ -34,19 +34,19 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-[2px] overflow-y-auto" onClick={onClose}>
             <div
-                className={`bg-white rounded-lg shadow-xl w-full ${sizes[size]} max-h-[90vh] flex flex-col`}
+                className={`bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full ${sizes[size]} max-h-[94vh] sm:max-h-[90vh] flex flex-col my-auto border border-gray-100 animate-in fade-in zoom-in-95 duration-150`}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                    <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+                <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-100 flex-shrink-0">
+                    <h2 className="text-base sm:text-lg font-bold text-gray-900 leading-tight">{title}</h2>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition p-1 rounded hover:bg-gray-100"
+                        className="text-gray-400 hover:text-gray-600 transition p-1.5 rounded-lg hover:bg-gray-100"
                     >
-                        <X size={20} />
+                        <X size={18} />
                     </button>
                 </div>
 

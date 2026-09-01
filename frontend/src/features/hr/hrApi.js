@@ -66,3 +66,15 @@ export const payrollApi = {
     markPaid: async (id) => (await api.patch(`/payroll/${id}/mark-paid`)).data,
     getPayslip: async (payrollId, employeeId) => (await api.get(`/payroll/${payrollId}/payslip/${employeeId}`)).data,
 };
+
+export const hrApi = {
+    departments: departmentsApi,
+    designations: designationsApi,
+    employees: employeesApi,
+    shifts: shiftsApi,
+    attendance: attendanceApi,
+    leaves: leavesApi,
+    holidays: holidaysApi,
+    salaryStructures: salaryStructuresApi,
+    payroll: payrollApi,
+};

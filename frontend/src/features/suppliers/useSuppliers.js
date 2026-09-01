@@ -11,7 +11,7 @@ export const useSuppliers = (filters = {}) => useQuery({
 export const useSupplier = (id) => useQuery({
     queryKey: ['supplier', id],
     queryFn: () => suppliersApi.getById(id),
-    enabled: !!id,
+    enabled: !!id && id !== 'undefined',
 });
 
 export const useCreateSupplier = () => {

@@ -38,8 +38,10 @@ import chequeRoutes from './routes/chequeRoutes.js';
 import bankRoutes from './routes/bankRoutes.js';
 import fundTransferRoutes from './routes/fundTransferRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
-
 import reportsRoutes from './routes/reportsRoutes.js';
+import bakeryRoutes from './routes/bakeryRoutes.js';
+import packBreakdownRoutes from './routes/packBreakdownRoutes.js';
+import employeeWageRoutes from './routes/employeeWageRoutes.js';
 
 import { seedDefaults } from './utils/seedDefaults.js';
 
@@ -113,6 +115,9 @@ app.use('/api/fund-transfers', fundTransferRoutes);
 app.use('/api/settings', settingsRoutes);
 
 app.use('/api/reports', reportsRoutes);
+app.use('/api/bakery', bakeryRoutes);
+app.use('/api/stock/pack-breakdowns', packBreakdownRoutes);
+app.use('/api/hr/wages', employeeWageRoutes);
 
 
 // Health check endpoint

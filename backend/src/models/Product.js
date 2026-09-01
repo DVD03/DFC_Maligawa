@@ -32,6 +32,7 @@ const productSchema = new mongoose.Schema(
             enum: ['finished_good', 'raw_material', 'semi_finished', 'packaging', 'service', 'consumable'],
             default: 'finished_good',
         },
+        isBakeryItem: { type: Boolean, default: false, index: true },
         canBeManufactured: { type: Boolean, default: false },
         canBePurchased: { type: Boolean, default: true },
         canBeSold: { type: Boolean, default: true },

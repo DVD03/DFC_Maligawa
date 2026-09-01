@@ -20,9 +20,18 @@ export const createSalesOrder = asyncHandler(async (req, res) => {
     } = req.body;
 
     // Fetch customer
-    const customer = await Customer.findById(customerId).populate('customerGroupId');
+    let customer = customerId ? await Customer.findById(customerId).populate('customerGroupId') : null;
     if (!customer) {
-        res.status(404); throw new Error('Customer not found');
+        customer = await Customer.findOne({ displayName: 'Walk-in Customer' });
+        if (!customer) {
+            customer = await Customer.create({
+                displayName: 'Walk-in Customer',
+                customerCode: 'CUST-WALKIN',
+                customerType: 'individual',
+                businessType: 'retailer',
+                primaryContact: { name: 'Walk-in Customer', phone: '0000000000' },
+            });
+        }
     }
 
     // const Warehouse = (await import('../models/Warehouse.js')).default;
@@ -78,8 +87,8 @@ export const createSalesOrder = asyncHandler(async (req, res) => {
             unitPrice: item.unitPrice ?? product.basePrice,
             discountPercent: item.discountPercent || 0,
             discountAmount: item.discountAmount || 0,
-            taxRate: item.taxRate ?? (product.tax?.taxRate || 0),
-            taxable: item.taxable ?? (product.tax?.taxable ?? true),
+            taxRate: req.body.source === 'pos' ? 0 : (item.taxRate ?? (product.tax?.taxRate || 0)),
+            taxable: req.body.source === 'pos' ? false : (item.taxable ?? (product.tax?.taxable ?? true)),
             notes: item.notes,
         });
     }
@@ -214,42 +223,57 @@ export const createSalesOrder = asyncHandler(async (req, res) => {
                     await receivingAccount.save({ session });
                 }
                 
-                const payment = new Payment({
-                    direction: 'received',
-                    customerId: order.customerId,
-                    partyName: order.customerSnapshot.name,
-                    amount: invoice.grandTotal,
-                    method: 'cash',
-                    bankAccountId: receivingAccountId,
-                    allocations: [{
-                        documentType: 'invoice',
-                        documentId: invoice._id,
-                        documentNumber: invoice.invoiceNumber,
-                        amount: invoice.grandTotal
-                    }],
-                    status: 'cleared',
-                    receivedBy: req.user._id,
-                    createdBy: req.user._id
-                });
-                await payment.save({ session });
-                
-                // Update Invoice payment status
-                invoice.amountPaid = invoice.grandTotal;
-                invoice.balanceDue = 0;
-                invoice.paymentStatus = 'paid';
-                invoice.fullyPaidAt = new Date();
-                invoice.cashReceived = order.cashReceived;
-                invoice.changeReturned = order.changeReturned;
-                await invoice.save({ session });
+                const method = req.body.paymentMethod || 'cash';
+                const isPaidInFull = method !== 'credit';
 
-                // Recalculate customer credit balance to reflect payment
-                await updateCustomerBalance(order.customerId, session);
-                
-                // Update PosSession cashSales
-                const activeSession = await PosSession.findOne({ userId: req.user._id, status: 'open' }).session(session);
-                if (activeSession) {
-                    activeSession.cashSales += invoice.grandTotal;
-                    await activeSession.save({ session });
+                if (isPaidInFull) {
+                    const payment = new Payment({
+                        direction: 'received',
+                        customerId: order.customerId,
+                        partyName: order.customerSnapshot.name,
+                        amount: invoice.grandTotal,
+                        method: method === 'split' ? 'mixed' : (method === 'qr' || method === 'bank_transfer' ? 'bank_transfer' : method),
+                        bankAccountId: receivingAccountId,
+                        allocations: [{
+                            documentType: 'invoice',
+                            documentId: invoice._id,
+                            documentNumber: invoice.invoiceNumber,
+                            amount: invoice.grandTotal
+                        }],
+                        status: 'cleared',
+                        receivedBy: req.user._id,
+                        createdBy: req.user._id
+                    });
+                    await payment.save({ session });
+                    
+                    // Update Invoice payment status
+                    invoice.amountPaid = invoice.grandTotal;
+                    invoice.balanceDue = 0;
+                    invoice.paymentStatus = 'paid';
+                    invoice.fullyPaidAt = new Date();
+                    invoice.cashReceived = order.cashReceived || (method === 'cash' ? invoice.grandTotal : undefined);
+                    invoice.changeReturned = order.changeReturned || 0;
+                    await invoice.save({ session });
+
+                    // Recalculate customer credit balance to reflect payment
+                    await updateCustomerBalance(order.customerId, session);
+                    
+                    // Update PosSession cashSales if cash
+                    if (method === 'cash' || method === 'split') {
+                        const activeSession = await PosSession.findOne({ userId: req.user._id, status: 'open' }).session(session);
+                        if (activeSession) {
+                            const cashPortion = method === 'split' ? (req.body.cashAmount || invoice.grandTotal) : invoice.grandTotal;
+                            activeSession.cashSales += cashPortion;
+                            await activeSession.save({ session });
+                        }
+                    }
+                } else {
+                    // Credit sale - left unpaid
+                    invoice.paymentStatus = 'unpaid';
+                    invoice.balanceDue = invoice.grandTotal;
+                    invoice.amountPaid = 0;
+                    await invoice.save({ session });
+                    await updateCustomerBalance(order.customerId, session);
                 }
             }
         });
