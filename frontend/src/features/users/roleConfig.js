@@ -56,6 +56,13 @@ export const ROLES = [
         permissions: ['adjust_stock', 'manage_stock', 'manage_products'],
     },
     {
+        value: 'cashier',
+        label: 'Cashier',
+        description: 'POS sales terminal, customer checkout, and register sessions',
+        color: '#10b981',
+        permissions: ['pos_sales', 'create_orders'],
+    },
+    {
         value: 'staff',
         label: 'Staff',
         description: 'View-only access to most modules',

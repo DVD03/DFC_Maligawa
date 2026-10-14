@@ -45,7 +45,7 @@ router
 router
     .route('/entries')
     .get(getDailyEntries)
-    .post(authorize('admin', 'manager', 'inventory_admin', 'warehouse_staff', 'staff'), createDailyEntry);
+    .post(authorize('admin', 'manager', 'inventory_admin', 'warehouse_staff', 'cashier', 'staff'), createDailyEntry);
 
 router
     .route('/entries/:id')

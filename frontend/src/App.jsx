@@ -111,7 +111,7 @@ function App() {
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
       <Route path="/receipt/:id" element={
-          <ProtectedRoute allowedRoles={['admin', 'manager', 'accountant', 'sales_manager', 'sales_rep', 'warehouse_staff', 'production_staff', 'inventory_admin', 'staff']}>
+          <ProtectedRoute allowedRoles={['admin', 'manager', 'accountant', 'sales_manager', 'sales_rep', 'warehouse_staff', 'production_staff', 'inventory_admin', 'staff', 'cashier']}>
             <ReceiptPrintPage />
           </ProtectedRoute>
         }
@@ -120,7 +120,7 @@ function App() {
       <Route
         path="/price-checker"
         element={
-          <ProtectedRoute allowedRoles={['customer', 'admin', 'manager', 'inventory_admin', 'staff']}>
+          <ProtectedRoute allowedRoles={['customer', 'admin', 'manager', 'inventory_admin', 'staff', 'cashier']}>
             <PriceCheckerPage />
           </ProtectedRoute>
         }
@@ -128,7 +128,7 @@ function App() {
 
       <Route
         element={
-          <ProtectedRoute allowedRoles={['admin', 'manager', 'accountant', 'sales_manager', 'sales_rep', 'warehouse_staff', 'production_staff', 'inventory_admin', 'staff']}>
+          <ProtectedRoute allowedRoles={['admin', 'manager', 'accountant', 'sales_manager', 'sales_rep', 'warehouse_staff', 'production_staff', 'inventory_admin', 'staff', 'cashier']}>
             <AppLayout />
           </ProtectedRoute>
         }

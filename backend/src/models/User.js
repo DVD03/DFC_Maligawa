@@ -35,7 +35,7 @@ const userSchema = new mongoose.Schema(
         },
         role: {
             type: String,
-            enum: ['admin', 'manager', 'accountant', 'sales_manager', 'sales_rep', 'warehouse_staff', 'production_staff', 'staff', 'customer', 'inventory_admin'],
+            enum: ['admin', 'manager', 'accountant', 'sales_manager', 'sales_rep', 'warehouse_staff', 'production_staff', 'staff', 'customer', 'inventory_admin', 'cashier'],
             default: 'staff',
         },
         nic: { type: String, trim: true },
