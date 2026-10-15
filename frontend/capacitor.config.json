@@ -1,0 +1,9 @@
+{
+  "appId": "com.dineshfoodcourt.pos",
+  "appName": "DFC POS",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}

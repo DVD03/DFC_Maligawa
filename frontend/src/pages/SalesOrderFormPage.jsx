@@ -106,17 +106,20 @@ export default function SalesOrderFormPage() {
     const productOptions = products
         .filter((p) => p.canBeSold !== false)
         .map((p) => {
+            const isNonStock = p.trackStock === false || p.productType === 'service' || p.type === 'service';
             const stock = stockMap.get(p._id);
-            const available = stock?.available || 0;
-            const outOfStock = available <= 0;
-            const lowStock = available > 0 && available <= (p.stockLevels?.reorderLevel || 0);
+            const available = isNonStock ? 999999 : (stock?.available || 0);
+            const outOfStock = !isNonStock && available <= 0;
+            const lowStock = !isNonStock && available > 0 && available <= (p.stockLevels?.reorderLevel || 0);
             return {
                 value: p._id,
-                label: `${p.name} · ${p.productCode} · ${outOfStock
-                    ? '⚠ Out of stock'
-                    : lowStock
-                        ? `⚠ Only ${available} left`
-                        : `✓ ${available} available`
+                label: `${p.name} · ${p.productCode} · ${isNonStock
+                    ? '✓ Non-Stock (Available)'
+                    : outOfStock
+                        ? '⚠ Out of stock'
+                        : lowStock
+                            ? `⚠ Only ${available} left`
+                            : `✓ ${available} available`
                     } · LKR ${p.basePrice}`,
                 disabled: outOfStock,
             };

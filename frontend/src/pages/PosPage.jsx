@@ -5,7 +5,8 @@ import {
     Search, Plus, Minus, Trash2, ShoppingCart, Save, X,
     Package, AlertCircle, UserPlus, PackagePlus, CreditCard,
     CheckCircle, ArrowLeft, LayoutGrid, List,
-    Banknote, QrCode, Split, Zap, DollarSign, Wallet, FileText, ArrowRight
+    Banknote, QrCode, Split, Zap, DollarSign, Wallet, FileText, ArrowRight,
+    Wifi, WifiOff, RefreshCw, Scale
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -75,9 +76,36 @@ export default function PosPage() {
     const [splitCashAmount, setSplitCashAmount] = useState('');
     const [splitCardAmount, setSplitCardAmount] = useState('');
 
+    // Weight Selection Modal (for Bites & Per-KG items)
+    const [weightModalProduct, setWeightModalProduct] = useState(null);
+    const [selectedWeightGrams, setSelectedWeightGrams] = useState(100);
+    const [customWeightInput, setCustomWeightInput] = useState('100');
+
     // Direct Printing
     const [recentInvoice, setRecentInvoice] = useState(null);
     const [paymentForPrint, setPaymentForPrint] = useState([]);
+
+    // Offline storage & sync state
+    const [offlineQueue, setOfflineQueue] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('pos_offline_orders') || '[]');
+        } catch {
+            return [];
+        }
+    });
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+    useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
 
     // Data
     const { data: activeSessionData, isLoading: isLoadingSession } = useQuery({
@@ -102,11 +130,59 @@ export default function PosPage() {
         enabled: !!sourceWarehouseId,
     });
 
+    // Cache to localStorage for offline access
+    useEffect(() => {
+        if (productsData?.data?.length > 0) {
+            localStorage.setItem('pos_offline_products', JSON.stringify(productsData.data));
+        }
+    }, [productsData]);
+
+    useEffect(() => {
+        const catList = Array.isArray(categoriesData?.data) ? categoriesData.data : (Array.isArray(categoriesData) ? categoriesData : []);
+        if (catList.length > 0) {
+            localStorage.setItem('pos_offline_categories', JSON.stringify(catList));
+        }
+    }, [categoriesData]);
+
+    useEffect(() => {
+        if (stockData?.data?.length > 0 && sourceWarehouseId) {
+            localStorage.setItem('pos_offline_stock_' + sourceWarehouseId, JSON.stringify(stockData.data));
+        }
+    }, [stockData, sourceWarehouseId]);
+
     const warehouses = warehousesData?.data || [];
     const customers = customersData?.data || [];
-    const products = (productsData?.data || []).filter((p) => p.canBeSold !== false);
-    const categories = categoriesData?.data || [];
-    const stockItems = stockData?.data || [];
+
+    const products = useMemo(() => {
+        if (productsData?.data?.length) return productsData.data.filter((p) => p.canBeSold !== false);
+        try {
+            const raw = localStorage.getItem('pos_offline_products');
+            return raw ? JSON.parse(raw).filter((p) => p.canBeSold !== false) : [];
+        } catch {
+            return [];
+        }
+    }, [productsData]);
+
+    const categories = useMemo(() => {
+        const catList = Array.isArray(categoriesData?.data) ? categoriesData.data : (Array.isArray(categoriesData) ? categoriesData : null);
+        if (catList && catList.length > 0) return catList;
+        try {
+            const raw = localStorage.getItem('pos_offline_categories');
+            return raw ? JSON.parse(raw) : [];
+        } catch {
+            return [];
+        }
+    }, [categoriesData]);
+
+    const stockItems = useMemo(() => {
+        if (stockData?.data?.length) return stockData.data;
+        try {
+            const raw = localStorage.getItem('pos_offline_stock_' + sourceWarehouseId);
+            return raw ? JSON.parse(raw) : [];
+        } catch {
+            return [];
+        }
+    }, [stockData, sourceWarehouseId]);
 
     // Set default warehouse
     useEffect(() => {
@@ -136,7 +212,10 @@ export default function PosPage() {
     const filteredProducts = useMemo(() => {
         let result = products;
         if (activeCategory !== 'all') {
-            result = result.filter((p) => (p.categoryId?._id || p.categoryId) === activeCategory);
+            result = result.filter((p) => {
+                const pCatId = (p.categoryId?._id || p.categoryId)?.toString();
+                return pCatId === activeCategory?.toString();
+            });
         }
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
@@ -146,7 +225,7 @@ export default function PosPage() {
                 || p.barcode?.toLowerCase().includes(q)
             );
         }
-        return result.slice(0, 60); // limit display
+        return result.slice(0, 150); // limit display
     }, [products, activeCategory, searchQuery]);
 
     const customerSuggestions = useMemo(() => {
@@ -189,12 +268,86 @@ export default function PosPage() {
         label: `${c.displayName} (${c.customerCode})`,
     }));
 
+    // Helper to check non-stock items (beverages, services, trackStock: false)
+    const checkIsNonStock = (product) => {
+        if (!product) return false;
+        if (product.trackStock === false) return true;
+        if (product.productType === 'service' || product.type === 'service') return true;
+        const name = (product.name || '').toLowerCase();
+        if (/nescafe|nestea|plain tea|milk tea|coffee/i.test(name)) return true;
+        return false;
+    };
+
+    // Helper to check if a product is sold by weight (loose bites, mixtures, bulk per-kg items)
+    const isWeightProduct = (product) => {
+        if (!product) return false;
+        if (product.isWeightBased === true) return true;
+        if (product.isWeightBased === false) return false;
+        // Fallback for legacy items without explicit isWeightBased flag:
+        const uom = (product.unitOfMeasure || '').toLowerCase();
+        const name = (product.name || '').toLowerCase();
+        const isPacketOrFixedGram = /(\d+\s*g|pkt|packet)/i.test(name);
+        return (uom === 'kg' || uom === 'g') && !isPacketOrFixedGram;
+    };
+
+    const handleProductClick = (product) => {
+        if (isWeightProduct(product)) {
+            setWeightModalProduct(product);
+            const existing = cart.find((i) => i.productId === (product._id || product.productId));
+            const initialGrams = existing ? Math.round(existing.qty * 1000) : 100;
+            setSelectedWeightGrams(initialGrams);
+            setCustomWeightInput(initialGrams.toString());
+            return;
+        }
+        addToCart(product);
+    };
+
+    const confirmWeight = (product, grams) => {
+        const g = Math.max(1, parseFloat(grams) || 100);
+        const isGramsUom = (product.unitOfMeasure || '').toLowerCase() === 'g';
+        const qtyInKg = isGramsUom ? g : +(g / 1000).toFixed(3);
+
+        const isNonStock = checkIsNonStock(product);
+        const stock = stockMap.get(product._id || product.productId);
+        const available = isNonStock ? 999999 : (stock ? Math.max(0, stock.onHand - stock.reserved) : (!isOnline ? 999999 : 0));
+
+        const basePrice = product.basePrice || product.price || 0;
+        const pid = product._id || product.productId;
+
+        setCart((prev) => {
+            const existing = prev.find((i) => i.productId === pid);
+            if (existing) {
+                return prev.map((i) => i.productId === pid
+                    ? { ...i, qty: qtyInKg, price: basePrice }
+                    : i
+                );
+            }
+
+            return [...prev, {
+                productId: pid,
+                name: product.name,
+                code: product.productCode || product.code,
+                price: basePrice,
+                qty: qtyInKg,
+                available,
+                isNonStock,
+                unitOfMeasure: product.unitOfMeasure || 'kg',
+                tierPricing: product.tierPricing || [],
+                basePrice: basePrice,
+            }];
+        });
+
+        setWeightModalProduct(null);
+        toast.success(`Set ${g}g of ${product.name} (${fmt(qtyInKg * basePrice)})`);
+    };
+
     // Cart actions
     const addToCart = (product) => {
+        const isNonStock = checkIsNonStock(product);
         const stock = stockMap.get(product._id);
-        const available = stock ? Math.max(0, stock.onHand - stock.reserved) : 0;
+        const available = isNonStock ? 999999 : (stock ? Math.max(0, stock.onHand - stock.reserved) : (!isOnline ? 999999 : 0));
 
-        if (available <= 0) {
+        if (!isNonStock && isOnline && available <= 0) {
             toast.error(`${product.name} is out of stock at this warehouse`);
             return;
         }
@@ -202,11 +355,11 @@ export default function PosPage() {
         setCart((prev) => {
             const existing = prev.find((i) => i.productId === product._id);
             if (existing) {
-                if (existing.qty >= available) {
+                if (!isNonStock && existing.qty >= available) {
                     toast.error(`Only ${available} available`);
                     return prev;
                 }
-                const newQty = existing.qty + 1;
+                const newQty = +(existing.qty + 1).toFixed(3);
                 const tierPrice = getTierPrice(product, newQty);
                 let price = tierPrice;
                 if (selectedCustomer?.defaultDiscountPercent) {
@@ -229,6 +382,7 @@ export default function PosPage() {
                 price: +price.toFixed(2),
                 qty: 1,
                 available,
+                isNonStock,
                 unitOfMeasure: product.unitOfMeasure,
                 tierPricing: product.tierPricing || [],
                 basePrice: product.basePrice,
@@ -239,9 +393,11 @@ export default function PosPage() {
     const updateQty = (productId, delta) => {
         setCart((prev) => prev.map((i) => {
             if (i.productId !== productId) return i;
-            const newQty = i.qty + delta;
+            const isWeight = i.qty < 1 || (i.unitOfMeasure || '').toLowerCase() === 'kg' || (i.name || '').toLowerCase().includes('bite');
+            const step = isWeight && i.qty <= 1 ? (delta > 0 ? 0.05 : -0.05) : delta;
+            const newQty = +(i.qty + step).toFixed(3);
             if (newQty <= 0) return null;
-            if (newQty > i.available) {
+            if (!i.isNonStock && newQty > i.available) {
                 toast.error(`Only ${i.available} available`);
                 return i;
             }
@@ -258,8 +414,8 @@ export default function PosPage() {
     const setQty = (productId, qty) => {
         setCart((prev) => prev.map((i) => {
             if (i.productId !== productId) return i;
-            const newQty = Math.max(0, +qty || 0);
-            if (newQty > i.available) {
+            const newQty = Math.max(0, parseFloat(qty) || 0);
+            if (!i.isNonStock && newQty > i.available) {
                 toast.error(`Only ${i.available} available`);
                 return i;
             }
@@ -301,6 +457,42 @@ export default function PosPage() {
     }, [cart, orderDiscountPercent, orderDiscountAmount]);
 
     const fmt = (n) => new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR', minimumFractionDigits: 2 }).format(n || 0);
+
+    const syncOfflineOrders = async () => {
+        if (offlineQueue.length === 0 || isSyncing) return;
+        setIsSyncing(true);
+        const toastId = toast.loading(`Syncing ${offlineQueue.length} offline orders...`);
+        let syncedCount = 0;
+        const currentQueue = [...offlineQueue];
+        const remainingQueue = [];
+
+        for (const order of currentQueue) {
+            try {
+                const { offlineId, cartSummary, total, createdAtLocal, ...orderPayload } = order;
+                await createOrder.mutateAsync(orderPayload);
+                syncedCount++;
+            } catch (err) {
+                console.error(`Failed to sync offline order ${order.offlineId}:`, err);
+                remainingQueue.push(order);
+            }
+        }
+
+        setOfflineQueue(remainingQueue);
+        localStorage.setItem('pos_offline_orders', JSON.stringify(remainingQueue));
+        setIsSyncing(false);
+
+        if (syncedCount > 0) {
+            toast.success(`Successfully synced ${syncedCount} offline order(s)!`, { id: toastId });
+        } else {
+            toast.error(`Sync failed. Please check connection.`, { id: toastId });
+        }
+    };
+
+    useEffect(() => {
+        if (isOnline && offlineQueue.length > 0 && !isSyncing) {
+            syncOfflineOrders();
+        }
+    }, [isOnline]);
 
     const handleCheckout = async (saveAsDraft = false, method = 'cash', cashAmt = null, changeAmt = null, reference = '', cashSplit = 0) => {
         let finalCustomerId = customerId;
@@ -397,7 +589,31 @@ export default function PosPage() {
                 }
             }
         } catch (err) {
+            const isNetworkError = !navigator.onLine || err.message === 'Network Error' || !err.response;
+            if (isNetworkError) {
+                const offlineId = 'OFF-' + Date.now().toString().slice(-6);
+                const offlineOrder = {
+                    ...payload,
+                    offlineId,
+                    createdAtLocal: new Date().toISOString(),
+                    cartSummary: cart.map(i => `${i.qty}x ${i.name}`).join(', '),
+                    total: totals.grandTotal,
+                };
+                const updatedQueue = [...offlineQueue, offlineOrder];
+                setOfflineQueue(updatedQueue);
+                localStorage.setItem('pos_offline_orders', JSON.stringify(updatedQueue));
+
+                toast.success(`Offline Sale Saved (#${offlineId})! Will sync when reconnected.`, { duration: 5000 });
+                setCart([]);
+                setCustomerId('');
+                setCustomerSearch('');
+                setCustomerPhone('');
+                setOrderDiscountPercent(0);
+                setOrderDiscountAmount(0);
+                return;
+            }
             console.error('Checkout failed:', err);
+            toast.error(err.response?.data?.message || 'Checkout failed');
         }
     };
 
@@ -414,8 +630,23 @@ export default function PosPage() {
                             <ShoppingCart size={20} /> POS
                         </h1>
                     </div>
-                    {/* Mobile Register Open/Close button */}
-                    <div className="flex md:hidden gap-2">
+                    {/* Mobile Register Open/Close button & Sync indicator */}
+                    <div className="flex md:hidden items-center gap-1.5">
+                        {(!isOnline || offlineQueue.length > 0) && (
+                            <div className="flex items-center gap-1 bg-amber-50 border border-amber-300 text-amber-900 px-2 py-1 rounded text-xs font-semibold">
+                                {isOnline ? <Wifi size={12} className="text-emerald-600" /> : <WifiOff size={12} className="text-rose-600 animate-pulse" />}
+                                {offlineQueue.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={syncOfflineOrders}
+                                        disabled={isSyncing || !isOnline}
+                                        className="bg-amber-600 active:bg-amber-700 text-white px-1.5 py-0.5 rounded text-[10px] font-bold"
+                                    >
+                                        {isSyncing ? '...' : `Sync (${offlineQueue.length})`}
+                                    </button>
+                                )}
+                            </div>
+                        )}
                         {activeSession ? (
                             <Button variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50 text-xs py-1.5 px-2.5 h-[36px]" onClick={() => setIsCloseRegisterModalOpen(true)}>
                                 Close Reg
@@ -534,7 +765,24 @@ export default function PosPage() {
                     )}
                 </div>
 
-                <div className="hidden md:flex gap-2 shrink-0">
+                <div className="hidden md:flex gap-2 shrink-0 items-center">
+                    {(!isOnline || offlineQueue.length > 0) && (
+                        <div className="flex items-center gap-2 bg-amber-50 border border-amber-300 text-amber-900 px-3 py-1.5 rounded-lg text-xs font-semibold">
+                            {isOnline ? <Wifi size={14} className="text-emerald-600" /> : <WifiOff size={14} className="text-rose-600 animate-pulse" />}
+                            <span>{isOnline ? 'Online' : 'Offline'}</span>
+                            {offlineQueue.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={syncOfflineOrders}
+                                    disabled={isSyncing || !isOnline}
+                                    className="inline-flex items-center gap-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white px-2 py-0.5 rounded text-[11px] font-bold shadow-sm transition"
+                                >
+                                    <RefreshCw size={11} className={isSyncing ? "animate-spin" : ""} />
+                                    {isSyncing ? 'Syncing...' : `Sync (${offlineQueue.length})`}
+                                </button>
+                            )}
+                        </div>
+                    )}
                     {activeSession ? (
                         <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" onClick={() => setIsCloseRegisterModalOpen(true)}>
                             Close Register
@@ -621,15 +869,16 @@ export default function PosPage() {
                         ) : viewMode === 'list' ? (
                             <div className="flex flex-col gap-2">
                                 {filteredProducts.map((p) => {
+                                    const isNonStock = checkIsNonStock(p);
                                     const stock = stockMap.get(p._id);
-                                    const available = stock ? Math.max(0, stock.onHand - stock.reserved) : 0;
+                                    const available = isNonStock ? 999999 : (stock ? Math.max(0, stock.onHand - stock.reserved) : 0);
                                     const inCart = cart.find((i) => i.productId === p._id)?.qty || 0;
-                                    const outOfStock = available <= 0;
+                                    const outOfStock = !isNonStock && available <= 0;
 
                                     return (
                                         <button
                                             key={p._id}
-                                            onClick={() => addToCart(p)}
+                                            onClick={() => handleProductClick(p)}
                                             disabled={outOfStock}
                                             className={`text-left bg-white border rounded-xl p-3 flex items-center justify-between transition-all ${outOfStock
                                                 ? 'opacity-50 cursor-not-allowed'
@@ -637,11 +886,16 @@ export default function PosPage() {
                                                 } ${inCart > 0 ? 'border-primary-500 bg-primary-50/50 ring-1 ring-primary-500' : ''}`}
                                         >
                                             <div className="min-w-0 flex-1 pr-4">
-                                                <div className="flex items-center gap-2 mb-0.5">
+                                                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                                                     <span className="font-bold text-sm text-gray-800 truncate">{p.name}</span>
+                                                    {isWeightProduct(p) && (
+                                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded">
+                                                            <Scale size={10} /> By Weight
+                                                        </span>
+                                                    )}
                                                     {inCart > 0 && (
                                                         <Badge variant="primary" className="px-1.5 py-0 text-[10px] font-bold">
-                                                            {inCart} in cart
+                                                            {inCart < 1 ? `${Math.round(inCart * 1000)}g` : inCart} in cart
                                                         </Badge>
                                                     )}
                                                 </div>
@@ -650,16 +904,25 @@ export default function PosPage() {
                                                     <span>•</span>
                                                     <span className="flex items-center gap-1">
                                                         Stock: 
-                                                        <span className={`font-bold ${available <= 5 ? 'text-amber-600' : 'text-gray-700'}`}>
-                                                            {available} {p.unitOfMeasure || 'pcs'}
-                                                        </span>
+                                                        {isNonStock ? (
+                                                            <span className="font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded text-[10px]">
+                                                                Non-Stock (Available)
+                                                            </span>
+                                                        ) : (
+                                                            <span className={`font-bold ${available <= 5 ? 'text-amber-600' : 'text-gray-700'}`}>
+                                                                {available} {p.unitOfMeasure || 'pcs'}
+                                                            </span>
+                                                        )}
                                                     </span>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3 shrink-0">
-                                                <p className="text-sm font-black text-primary-600">{fmt(p.basePrice)}</p>
-                                                <Badge variant={outOfStock ? 'danger' : available <= 5 ? 'warning' : 'success'} className="px-2 py-0.5 text-xs font-semibold">
-                                                    {outOfStock ? 'Out of Stock' : 'Available'}
+                                                <div className="text-right">
+                                                    <p className="text-sm font-black text-primary-600">{fmt(p.basePrice)}</p>
+                                                    {isWeightProduct(p) && <p className="text-[10px] text-amber-700 font-medium">/ 1 KG</p>}
+                                                </div>
+                                                <Badge variant={outOfStock ? 'danger' : isNonStock ? 'info' : available <= 5 ? 'warning' : 'success'} className="px-2 py-0.5 text-xs font-semibold">
+                                                    {outOfStock ? 'Out of Stock' : isNonStock ? 'Always Available' : 'Available'}
                                                 </Badge>
                                             </div>
                                         </button>
@@ -669,15 +932,16 @@ export default function PosPage() {
                         ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
                                 {filteredProducts.map((p) => {
+                                    const isNonStock = checkIsNonStock(p);
                                     const stock = stockMap.get(p._id);
-                                    const available = stock ? Math.max(0, stock.onHand - stock.reserved) : 0;
+                                    const available = isNonStock ? 999999 : (stock ? Math.max(0, stock.onHand - stock.reserved) : 0);
                                     const inCart = cart.find((i) => i.productId === p._id)?.qty || 0;
-                                    const outOfStock = available <= 0;
+                                    const outOfStock = !isNonStock && available <= 0;
 
                                     return (
                                         <button
                                             key={p._id}
-                                            onClick={() => addToCart(p)}
+                                            onClick={() => handleProductClick(p)}
                                             disabled={outOfStock}
                                             className={`relative text-left bg-white border rounded-xl p-3 flex flex-col justify-between transition-all min-h-[96px] ${outOfStock
                                                 ? 'opacity-50 cursor-not-allowed'
@@ -685,18 +949,28 @@ export default function PosPage() {
                                                 } ${inCart > 0 ? 'border-primary-500 bg-primary-50/50 ring-1 ring-primary-500' : ''}`}>
                                             <div>
                                                 <p className="text-xs font-bold text-gray-800 line-clamp-2 mb-0.5 leading-snug">{p.name}</p>
-                                                <p className="text-[10px] text-gray-400 font-mono">{p.productCode}</p>
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-[10px] text-gray-400 font-mono">{p.productCode}</p>
+                                                    {isWeightProduct(p) && (
+                                                        <span className="text-[9px] font-bold text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">
+                                                            ⚖️ / KG
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-                                                <p className="text-xs font-extrabold text-primary-600">{fmt(p.basePrice)}</p>
-                                                <span className={`text-[10px] font-bold ${outOfStock ? 'text-red-500' : available <= 5 ? 'text-amber-500' : 'text-green-600'}`}>
-                                                    {outOfStock ? 'Out' : `${available} Left`}
+                                                <div>
+                                                    <p className="text-xs font-extrabold text-primary-600">{fmt(p.basePrice)}</p>
+                                                    {isWeightProduct(p) && <p className="text-[9px] text-amber-700">per 1 KG</p>}
+                                                </div>
+                                                <span className={`text-[10px] font-bold ${outOfStock ? 'text-red-500' : isNonStock ? 'text-blue-600' : available <= 5 ? 'text-amber-500' : 'text-green-600'}`}>
+                                                    {outOfStock ? 'Out' : isNonStock ? 'Available' : `${available} Left`}
                                                 </span>
                                             </div>
                                             {inCart > 0 && (
                                                 <div className="absolute top-1.5 right-1.5">
                                                     <span className="bg-primary-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
-                                                        {inCart}
+                                                        {inCart < 1 ? `${Math.round(inCart * 1000)}g` : inCart}
                                                     </span>
                                                 </div>
                                             )}
@@ -749,25 +1023,48 @@ export default function PosPage() {
                                             <Trash2 size={14} />
                                         </button>
                                     </div>
-                                    <div className="flex items-center justify-between gap-4">
-                                        <div className="flex items-center gap-1 bg-white border border-gray-100 rounded-lg p-0.5 shadow-sm">
-                                            <button onClick={() => updateQty(item.productId, -1)}
-                                                className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center hover:bg-gray-50 text-gray-500 rounded-md transition-colors">
-                                                <Minus size={14} />
-                                            </button>
-                                            <input type="number" value={item.qty} min="1" max={item.available}
-                                                onChange={(e) => setQty(item.productId, e.target.value)}
-                                                className="w-10 text-center text-sm font-bold bg-transparent border-0 focus:ring-0 p-0" />
-                                            <button onClick={() => updateQty(item.productId, 1)}
-                                                className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center hover:bg-gray-50 text-gray-500 rounded-md transition-colors">
-                                                <Plus size={14} />
-                                            </button>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <div className="flex items-center gap-1 bg-white border border-gray-100 rounded-lg p-0.5 shadow-sm">
+                                                <button onClick={() => updateQty(item.productId, -1)}
+                                                    className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 text-gray-500 rounded-md transition-colors">
+                                                    <Minus size={13} />
+                                                </button>
+                                                <input type="number" step="any" min="0.001" value={item.qty} max={item.isNonStock ? undefined : item.available}
+                                                    onChange={(e) => setQty(item.productId, e.target.value)}
+                                                    className="w-12 text-center text-xs font-bold bg-transparent border-0 focus:ring-0 p-0" />
+                                                <button onClick={() => updateQty(item.productId, 1)}
+                                                    className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 text-gray-500 rounded-md transition-colors">
+                                                    <Plus size={13} />
+                                                </button>
+                                            </div>
+
+                                            {/* Weight edit button - only for weight-based products */}
+                                            {isWeightProduct(item) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setWeightModalProduct(item);
+                                                        const curG = Math.round(item.qty * 1000) || 100;
+                                                        setSelectedWeightGrams(curG);
+                                                        setCustomWeightInput(curG.toString());
+                                                    }}
+                                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-2 py-1.5 rounded-lg transition"
+                                                    title="Change Weight (g)"
+                                                >
+                                                    <Scale size={12} />
+                                                    <span>{item.qty < 1 ? `${Math.round(item.qty * 1000)}g` : `${item.qty} kg`}</span>
+                                                </button>
+                                            )}
                                         </div>
-                                        <p className="text-sm font-black text-gray-900">{fmt(item.qty * item.price)}</p>
+                                        <p className="text-sm font-black text-gray-900 shrink-0">{fmt(item.qty * item.price)}</p>
                                     </div>
                                     <div className="flex justify-between items-center mt-2 text-[10px] text-gray-400 font-medium">
-                                        <span>{fmt(item.price)} {item.unitOfMeasure ? `/ ${item.unitOfMeasure}` : ''}</span>
-                                        <span className="bg-gray-100 px-1.5 py-0.5 rounded-full">{item.available} in stock</span>
+                                        <span>
+                                            {item.qty < 1 ? `${Math.round(item.qty * 1000)}g (${item.qty} kg) @ ` : `${item.qty} @ `}
+                                            {fmt(item.price)} {item.unitOfMeasure ? `/ ${item.unitOfMeasure}` : ''}
+                                        </span>
+                                        <span className="bg-gray-100 px-1.5 py-0.5 rounded-full">{item.isNonStock ? 'Non-Stock' : `${item.available} in stock`}</span>
                                     </div>
                                 </div>
                             ))
@@ -1269,6 +1566,144 @@ export default function PosPage() {
                         </Button>
                     </div>
                 </div>
+            </Modal>
+
+            {/* Weight & Grams Selection Modal for Bites / Per-KG items */}
+            <Modal
+                isOpen={!!weightModalProduct}
+                onClose={() => setWeightModalProduct(null)}
+                title={`⚖️ Select Weight — ${weightModalProduct?.name || ''}`}
+                size="md"
+            >
+                {weightModalProduct && (
+                    <div className="p-5 space-y-4">
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex justify-between items-center">
+                            <div>
+                                <h3 className="font-bold text-sm text-amber-950">{weightModalProduct.name}</h3>
+                                <p className="text-xs text-amber-700 font-mono mt-0.5">
+                                    Base Price: {fmt(weightModalProduct.basePrice || weightModalProduct.price)} / 1 KG
+                                </p>
+                            </div>
+                            <div className="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold">
+                                Sold by Weight
+                            </div>
+                        </div>
+
+                        {/* Quick Grams Chips */}
+                        <div>
+                            <label className="text-xs font-bold text-gray-600 block mb-2">Quick Grams Selection:</label>
+                            <div className="grid grid-cols-4 gap-2">
+                                {[
+                                    { label: '50g', grams: 50 },
+                                    { label: '100g', grams: 100 },
+                                    { label: '150g', grams: 150 },
+                                    { label: '200g', grams: 200 },
+                                    { label: '250g', grams: 250 },
+                                    { label: '500g (½ kg)', grams: 500 },
+                                    { label: '750g', grams: 750 },
+                                    { label: '1000g (1 kg)', grams: 1000 },
+                                ].map((chip) => {
+                                    const isSelected = selectedWeightGrams === chip.grams;
+                                    return (
+                                        <button
+                                            key={chip.grams}
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedWeightGrams(chip.grams);
+                                                setCustomWeightInput(chip.grams.toString());
+                                            }}
+                                            className={`py-2 px-1 text-xs font-bold rounded-lg border transition text-center ${
+                                                isSelected
+                                                    ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                                                    : 'bg-white hover:bg-amber-50 text-gray-700 border-gray-200'
+                                            }`}
+                                        >
+                                            {chip.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Custom Grams Input */}
+                        <div>
+                            <label className="text-xs font-bold text-gray-600 block mb-1">Custom Weight (in Grams):</label>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const newG = Math.max(10, selectedWeightGrams - 50);
+                                        setSelectedWeightGrams(newG);
+                                        setCustomWeightInput(newG.toString());
+                                    }}
+                                    className="w-11 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-lg font-bold text-gray-700 text-xs"
+                                >
+                                    -50g
+                                </button>
+                                <div className="relative flex-1">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        placeholder="e.g. 100"
+                                        value={customWeightInput}
+                                        onChange={(e) => {
+                                            setCustomWeightInput(e.target.value);
+                                            const val = parseFloat(e.target.value);
+                                            if (!isNaN(val) && val > 0) setSelectedWeightGrams(val);
+                                        }}
+                                        className="w-full px-3 py-2 text-center text-lg font-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">grams</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const newG = selectedWeightGrams + 50;
+                                        setSelectedWeightGrams(newG);
+                                        setCustomWeightInput(newG.toString());
+                                    }}
+                                    className="w-11 h-10 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-lg font-bold text-gray-700 text-xs"
+                                >
+                                    +50g
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Live Price Calculation Box */}
+                        <div className="bg-slate-900 text-white rounded-xl p-4 flex items-center justify-between shadow-inner">
+                            <div>
+                                <p className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Calculated Total</p>
+                                <p className="text-xs text-amber-400 font-medium mt-0.5">
+                                    {selectedWeightGrams}g ({((selectedWeightGrams || 0) / 1000).toFixed(3)} KG)
+                                </p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-2xl font-black text-white">
+                                    {fmt(((selectedWeightGrams || 0) / 1000) * (weightModalProduct.basePrice || weightModalProduct.price || 0))}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-2 pt-2 border-t">
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => setWeightModalProduct(null)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="primary"
+                                className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                                onClick={() => confirmWeight(weightModalProduct, selectedWeightGrams)}
+                            >
+                                Confirm {selectedWeightGrams}g
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </Modal>
 
 

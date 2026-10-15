@@ -71,7 +71,14 @@ export default function ProductsPage() {
             label: 'Product',
             render: (row) => (
                 <div>
-                    <p className="font-medium text-gray-900">{row.name}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-medium text-gray-900">{row.name}</p>
+                        {row.trackStock === false && (
+                            <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">
+                                Non-Stock
+                            </span>
+                        )}
+                    </div>
                     {row.sku && <p className="text-xs text-gray-500">SKU: {row.sku}</p>}
                 </div>
             ),

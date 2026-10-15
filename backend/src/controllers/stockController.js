@@ -21,9 +21,13 @@ export const getStockItems = asyncHandler(async (req, res) => {
     const filter = {};
     if (productId) {
         filter.productId = productId;
-    } else if (includeBakery !== 'true') {
-        const nonBakeryProducts = await Product.find({ isBakeryItem: { $ne: true } }).select('_id').lean();
-        filter.productId = { $in: nonBakeryProducts.map(p => p._id) };
+    } else {
+        const productFilter = { trackStock: { $ne: false } };
+        if (includeBakery !== 'true') {
+            productFilter.isBakeryItem = { $ne: true };
+        }
+        const trackedProducts = await Product.find(productFilter).select('_id').lean();
+        filter.productId = { $in: trackedProducts.map(p => p._id) };
     }
 
     if (warehouseId) filter.warehouseId = warehouseId;

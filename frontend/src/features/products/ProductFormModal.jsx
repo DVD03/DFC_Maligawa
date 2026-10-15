@@ -43,9 +43,16 @@ export default function ProductFormModal({ isOpen, onClose, product = null }) {
         resolver: zodResolver(productFormSchema),
         defaultValues: {
             type: 'trading',
+            productType: 'finished_good',
+            unitOfMeasure: 'pcs',
+            trackStock: true,
+            isWeightBased: false,
             status: 'active',
-            taxable: true,
-            taxRate: 18,
+            canBeSold: true,
+            canBePurchased: true,
+            canBeManufactured: false,
+            taxable: false,
+            taxRate: 0,
             sellable: true,
             allowBackorder: false,
             minimumOrderQuantity: 1,
@@ -83,6 +90,8 @@ export default function ProductFormModal({ isOpen, onClose, product = null }) {
                 sku: product.sku || '',
                 barcode: product.barcode || '',
                 productType: product.productType || 'finished_good',
+                trackStock: product.trackStock !== undefined ? product.trackStock : true,
+                isWeightBased: product.isWeightBased ?? false,
                 canBeSold: product.canBeSold ?? true,
                 canBePurchased: product.canBePurchased ?? true,
                 canBeManufactured: product.canBeManufactured ?? false,
@@ -124,9 +133,17 @@ export default function ProductFormModal({ isOpen, onClose, product = null }) {
             // Reset to defaults when creating new
             reset({
                 type: 'trading',
+                productType: 'finished_good',
+                unitOfMeasure: 'pcs',
+                categoryId: categoriesData?.data?.[0]?._id || '',
+                trackStock: true,
+                isWeightBased: false,
                 status: 'active',
-                taxable: true,
-                taxRate: 18,
+                canBeSold: true,
+                canBePurchased: true,
+                canBeManufactured: false,
+                taxable: false,
+                taxRate: 0,
                 sellable: true,
                 allowBackorder: false,
                 minimumOrderQuantity: 1,
@@ -152,6 +169,8 @@ export default function ProductFormModal({ isOpen, onClose, product = null }) {
             sku: data.sku || undefined,
             barcode: data.barcode || undefined,
             productType: data.productType,
+            trackStock: data.trackStock !== undefined ? data.trackStock : true,
+            isWeightBased: Boolean(data.isWeightBased),
             canBeSold: data.canBeSold,
             canBePurchased: data.canBePurchased,
             canBeManufactured: data.canBeManufactured,
@@ -206,6 +225,20 @@ export default function ProductFormModal({ isOpen, onClose, product = null }) {
         }
     };
 
+    const defaultUoms = [
+        { value: 'pcs', label: 'Pieces (pcs)' },
+        { value: 'kg', label: 'Kilograms (kg)' },
+        { value: 'g', label: 'Grams (g)' },
+        { value: 'pkt', label: 'Packets (pkt)' },
+        { value: 'box', label: 'Boxes (box)' },
+        { value: 'bottle', label: 'Bottles (bottle)' },
+        { value: 'can', label: 'Cans (can)' },
+        { value: 'portion', label: 'Portion (portion)' },
+        { value: 'cup', label: 'Cups (cup)' },
+        { value: 'ltr', label: 'Liters (ltr)' },
+        { value: 'ml', label: 'Milliliters (ml)' },
+    ];
+
     const categoryOptions = (categoriesData?.data || []).map((c) => ({
         value: c._id,
         label: `${c.name} (${c.code})`,
@@ -214,10 +247,39 @@ export default function ProductFormModal({ isOpen, onClose, product = null }) {
         value: b._id,
         label: b.name,
     }));
-    const uomOptions = (uomsData?.data || []).map((u) => ({
-        value: u.symbol,
-        label: `${u.name} (${u.symbol})`,
-    }));
+    const uomOptions = (uomsData?.data && uomsData.data.length > 0)
+        ? uomsData.data.map((u) => ({
+            value: u.symbol || u.code,
+            label: `${u.name} (${u.symbol || u.code})`,
+        }))
+        : defaultUoms;
+
+    const onError = (formErrors) => {
+        console.error('Product validation errors:', formErrors);
+        const errorKeys = Object.keys(formErrors);
+        if (errorKeys.length > 0) {
+            const firstKey = errorKeys[0];
+            const msg = formErrors[firstKey]?.message || `Please check: ${firstKey}`;
+            toast.error(msg);
+
+            // Auto-switch to the tab with the issue
+            if (['name', 'productNature', 'shortName', 'barcode', 'sku', 'type', 'categoryId', 'brandId', 'productType', 'unitOfMeasure', 'status'].includes(firstKey)) {
+                setActiveTab('basic');
+            } else if (['basePrice', 'buyingPrice', 'profitPercentage', 'mrp', 'callPrice', 'taxRate', 'taxable', 'hsCode'].includes(firstKey)) {
+                setActiveTab('pricing');
+            } else if (['variations'].includes(firstKey)) {
+                setActiveTab('variations');
+            } else if (['comboItems'].includes(firstKey)) {
+                setActiveTab('combo');
+            } else if (['tierPricing'].includes(firstKey)) {
+                setActiveTab('tiers');
+            } else if (['minimumLevel', 'reorderLevel', 'maximumLevel', 'unitsPerCarton', 'cartonsPerPallet'].includes(firstKey)) {
+                setActiveTab('stock');
+            } else if (['minimumOrderQuantity', 'sellable', 'allowBackorder'].includes(firstKey)) {
+                setActiveTab('sales');
+            }
+        }
+    };
 
     const isLoading = createProduct.isPending || updateProduct.isPending;
 
@@ -228,7 +290,7 @@ export default function ProductFormModal({ isOpen, onClose, product = null }) {
             title={isEdit ? `Edit Product — ${product?.productCode}` : 'Create New Product'}
             size="xl"
         >
-            <form onSubmit={handleSubmit(onSubmit)}>
+            <form onSubmit={handleSubmit(onSubmit, onError)}>
                 {/* Tabs */}
                 <div className="border-b border-gray-200">
                     <div className="flex gap-1 px-6 overflow-x-auto no-scrollbar">
@@ -354,6 +416,44 @@ export default function ProductFormModal({ isOpen, onClose, product = null }) {
                                     Can be manufactured
                                 </label>
                             </div>
+                            <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl flex items-center justify-between gap-4">
+                                <div>
+                                    <span className="font-bold text-sm text-gray-900 flex items-center gap-1.5">
+                                        📦 Track Stock / Inventory
+                                    </span>
+                                    <p className="text-xs text-gray-600 mt-0.5">
+                                        Uncheck for items sold without stock limits (e.g. Nestea, Nescafe, Tea, Coffee, Kitchen drinks, Services).
+                                    </p>
+                                </div>
+                                <label className="flex items-center gap-2 cursor-pointer shrink-0 font-medium text-xs text-gray-700 bg-white px-3 py-1.5 rounded-lg border border-amber-300 shadow-sm hover:bg-amber-50">
+                                    <input
+                                        type="checkbox"
+                                        className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500 cursor-pointer"
+                                        {...register('trackStock')}
+                                    />
+                                    <span>Track Stock</span>
+                                </label>
+                            </div>
+
+                            <div className="p-3 bg-indigo-50/80 border border-indigo-200 rounded-xl flex items-center justify-between gap-4">
+                                <div>
+                                    <span className="font-bold text-sm text-gray-900 flex items-center gap-1.5">
+                                        ⚖️ Sold by Weight (Per-KG / Grams Calculator in POS)
+                                    </span>
+                                    <p className="text-xs text-gray-600 mt-0.5">
+                                        Check for loose bites, mixtures, and bulk items priced per 1KG (POS opens Grams selector: 50g, 100g, 200g...). Keep unchecked for packeted bites with a fixed price.
+                                    </p>
+                                </div>
+                                <label className="flex items-center gap-2 cursor-pointer shrink-0 font-medium text-xs text-gray-700 bg-white px-3 py-1.5 rounded-lg border border-indigo-300 shadow-sm hover:bg-indigo-50">
+                                    <input
+                                        type="checkbox"
+                                        className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500 cursor-pointer"
+                                        {...register('isWeightBased')}
+                                    />
+                                    <span>By Weight</span>
+                                </label>
+                            </div>
+
                             <Textarea label="Description" rows={3} error={errors.description?.message} {...register('description')} />
                             <Textarea label="Internal Notes" rows={2} error={errors.notes?.message} {...register('notes')} />
                         </div>
@@ -612,6 +712,15 @@ export default function ProductFormModal({ isOpen, onClose, product = null }) {
 
                     {activeTab === 'stock' && (
                         <div className="space-y-4">
+                            {!watch('trackStock') && (
+                                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs flex items-start gap-3">
+                                    <span className="text-xl shrink-0">ℹ️</span>
+                                    <div>
+                                        <p className="font-bold text-sm text-amber-950 mb-1">Stock tracking is turned OFF for this product</p>
+                                        <p>This product will not require warehouse stock and can be sold in unlimited quantities in POS without stock restriction. To track warehouse stock for this item, enable "Track Stock / Inventory" under the General tab.</p>
+                                    </div>
+                                </div>
+                            )}
                             <h4 className="text-sm font-semibold text-gray-700">Stock Levels</h4>
                             <div className="grid grid-cols-3 gap-4">
                                 <Input
@@ -693,10 +802,10 @@ export default function ProductFormModal({ isOpen, onClose, product = null }) {
                             Cancel
                         </Button>
                         
-                        {activeTab !== 'sales' ? (
+                        {activeTab !== 'sales' && (
                             <Button
                                 type="button"
-                                variant="primary"
+                                variant="outline"
                                 onClick={() => {
                                     const currentIndex = tabs.findIndex(t => t.id === activeTab);
                                     if (currentIndex < tabs.length - 1) setActiveTab(tabs[currentIndex + 1].id);
@@ -704,11 +813,10 @@ export default function ProductFormModal({ isOpen, onClose, product = null }) {
                             >
                                 Next
                             </Button>
-                        ) : (
-                            <Button type="submit" variant="primary" loading={isLoading}>
-                                {isEdit ? 'Update Product' : 'Create Product'}
-                            </Button>
                         )}
+                        <Button type="submit" variant="primary" loading={isLoading}>
+                            {isEdit ? 'Update Product' : 'Create Product'}
+                        </Button>
                     </div>
                 </div>
             </form>

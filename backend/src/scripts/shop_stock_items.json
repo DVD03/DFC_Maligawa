@@ -1,0 +1,762 @@
+[
+  {
+    "sku": "BIS-001",
+    "category": "Biscuits & Wafers",
+    "name": "Ginger Biscuit 85g",
+    "brand": "Munchee",
+    "size": "85g",
+    "qty": 17,
+    "sellPrice": 130.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-002",
+    "category": "Biscuits & Wafers",
+    "name": "Ginger Biscuit 400g",
+    "brand": "Munchee",
+    "size": "400g",
+    "qty": 1,
+    "sellPrice": 450.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-003",
+    "category": "Biscuits & Wafers",
+    "name": "Ginger Biscuit 200g",
+    "brand": "Munchee",
+    "size": "200g",
+    "qty": 2,
+    "sellPrice": 250.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-004",
+    "category": "Biscuits & Wafers",
+    "name": "Milk Shorties 85g",
+    "brand": "Munchee",
+    "size": "85g",
+    "qty": 5,
+    "sellPrice": 120.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-005",
+    "category": "Biscuits & Wafers",
+    "name": "Milk Shorties 200g",
+    "brand": "Munchee",
+    "size": "200g",
+    "qty": 2,
+    "sellPrice": 250.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-006",
+    "category": "Biscuits & Wafers",
+    "name": "Tikitiri Marie 50g",
+    "brand": "Munchee",
+    "size": "50g",
+    "qty": 11,
+    "sellPrice": 50.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-007",
+    "category": "Biscuits & Wafers",
+    "name": "Hawaiian Cookies 200g",
+    "brand": "Maliban",
+    "size": "200g",
+    "qty": 3,
+    "sellPrice": 260.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-008",
+    "category": "Biscuits & Wafers",
+    "name": "Tiffin 125g",
+    "brand": "Munchee",
+    "size": "125g",
+    "qty": 2,
+    "sellPrice": 200.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-009",
+    "category": "Biscuits & Wafers",
+    "name": "Chocolate Biscuit 200g",
+    "brand": "Munchee",
+    "size": "200g",
+    "qty": 2,
+    "sellPrice": 270.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-010",
+    "category": "Biscuits & Wafers",
+    "name": "Milk Shorties 200g",
+    "brand": "Maliban",
+    "size": "200g",
+    "qty": 3,
+    "sellPrice": 250.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-011",
+    "category": "Biscuits & Wafers",
+    "name": "Vanilla Cookies 65g",
+    "brand": "Little Lion",
+    "size": "65g",
+    "qty": 2,
+    "sellPrice": 80.0,
+    "buyPrice": 70.0
+  },
+  {
+    "sku": "BIS-012",
+    "category": "Biscuits & Wafers",
+    "name": "Nice Biscuit 200g",
+    "brand": "Munchee",
+    "size": "200g",
+    "qty": 1,
+    "sellPrice": 240.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-013",
+    "category": "Biscuits & Wafers",
+    "name": "Batter Carol 250g",
+    "brand": "Little Lion",
+    "size": "250g",
+    "qty": 1,
+    "sellPrice": 340.0,
+    "buyPrice": 297.5
+  },
+  {
+    "sku": "BIS-014",
+    "category": "Biscuits & Wafers",
+    "name": "Tea Crunch 95g",
+    "brand": "Munchee",
+    "size": "95g",
+    "qty": 1,
+    "sellPrice": 110.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-015",
+    "category": "Biscuits & Wafers",
+    "name": "Chocolate Wafers 90g",
+    "brand": "Little Lion",
+    "size": "90g",
+    "qty": 3,
+    "sellPrice": 140.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-016",
+    "category": "Biscuits & Wafers",
+    "name": "Vanilla Wafers 90g",
+    "brand": "Little Lion",
+    "size": "90g",
+    "qty": 2,
+    "sellPrice": 130.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-017",
+    "category": "Biscuits & Wafers",
+    "name": "Chocolate Wafers 90g",
+    "brand": "Maliban",
+    "size": "90g",
+    "qty": 3,
+    "sellPrice": 140.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-018",
+    "category": "Biscuits & Wafers",
+    "name": "Lemon Wafers 85g",
+    "brand": "Munchee",
+    "size": "85g",
+    "qty": 10,
+    "sellPrice": 130.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-019",
+    "category": "Biscuits & Wafers",
+    "name": "Strawberry Wafers 90g",
+    "brand": "Little Lion",
+    "size": "90g",
+    "qty": 2,
+    "sellPrice": 130.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-020",
+    "category": "Biscuits & Wafers",
+    "name": "Vanilla Wafers 85g",
+    "brand": "Munchee",
+    "size": "85g",
+    "qty": 2,
+    "sellPrice": 130.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-021",
+    "category": "Biscuits & Wafers",
+    "name": "Lemon Wafers 90g",
+    "brand": "Maliban",
+    "size": "90g",
+    "qty": 7,
+    "sellPrice": 130.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-022",
+    "category": "Biscuits & Wafers",
+    "name": "Lemon Puff 100g",
+    "brand": "Munchee",
+    "size": "100g",
+    "qty": 4,
+    "sellPrice": 140.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-023",
+    "category": "Biscuits & Wafers",
+    "name": "Nice Biscuit 100g",
+    "brand": "Munchee",
+    "size": "100g",
+    "qty": 5,
+    "sellPrice": 120.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-024",
+    "category": "Biscuits & Wafers",
+    "name": "Nice Biscuit 200g",
+    "brand": "Munchee",
+    "size": "200g",
+    "qty": 1,
+    "sellPrice": 240.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-025",
+    "category": "Biscuits & Wafers",
+    "name": "Hawaiian Cookies 100g",
+    "brand": "Munchee",
+    "size": "100g",
+    "qty": 5,
+    "sellPrice": 140.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-026",
+    "category": "Biscuits & Wafers",
+    "name": "Hawaiian Cookies 200g",
+    "brand": "Munchee",
+    "size": "200g",
+    "qty": 1,
+    "sellPrice": 260.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-027",
+    "category": "Biscuits & Wafers",
+    "name": "Tea Crunch 190g",
+    "brand": "Munchee",
+    "size": "190g",
+    "qty": 5,
+    "sellPrice": 200.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-028",
+    "category": "Biscuits & Wafers",
+    "name": "Tea Crunch 95g",
+    "brand": "Munchee",
+    "size": "95g",
+    "qty": 2,
+    "sellPrice": 100.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-029",
+    "category": "Biscuits & Wafers",
+    "name": "Wafers Chocolate/Vanilla 225g",
+    "brand": "Maliban",
+    "size": "225g",
+    "qty": 2,
+    "sellPrice": 320.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-030",
+    "category": "Biscuits & Wafers",
+    "name": "Wafers 220g",
+    "brand": "Munchee",
+    "size": "220g",
+    "qty": 4,
+    "sellPrice": 300.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-031",
+    "category": "Biscuits & Wafers",
+    "name": "Lemon Puff 200g",
+    "brand": "Munchee",
+    "size": "200g",
+    "qty": 4,
+    "sellPrice": 270.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-032",
+    "category": "Biscuits & Wafers",
+    "name": "Gold Marie 200g",
+    "brand": "Munchee",
+    "size": "200g",
+    "qty": 1,
+    "sellPrice": 230.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-033",
+    "category": "Biscuits & Wafers",
+    "name": "Chocolate Puff 100g",
+    "brand": "Munchee",
+    "size": "100g",
+    "qty": 2,
+    "sellPrice": 140.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-034",
+    "category": "Biscuits & Wafers",
+    "name": "Cream Cracker 190g",
+    "brand": "Munchee",
+    "size": "190g",
+    "qty": 3,
+    "sellPrice": 200.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-035",
+    "category": "Biscuits & Wafers",
+    "name": "Cream Cracker 120g",
+    "brand": "Munchee",
+    "size": "120g",
+    "qty": 2,
+    "sellPrice": 130.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-036",
+    "category": "Biscuits & Wafers",
+    "name": "Cream Cracker 85g",
+    "brand": "Munchee",
+    "size": "85g",
+    "qty": 2,
+    "sellPrice": 100.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-037",
+    "category": "Biscuits & Wafers",
+    "name": "Cream Cracker 125g",
+    "brand": "Munchee",
+    "size": "125g",
+    "qty": 3,
+    "sellPrice": 140.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-038",
+    "category": "Biscuits & Wafers",
+    "name": "Cream Cracker 190g",
+    "brand": "Maliban",
+    "size": "190g",
+    "qty": 1,
+    "sellPrice": 200.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-039",
+    "category": "Biscuits & Wafers",
+    "name": "Cream Cracker 120g",
+    "brand": "Maliban",
+    "size": "120g",
+    "qty": 2,
+    "sellPrice": 120.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-040",
+    "category": "Biscuits & Wafers",
+    "name": "Cream Cracker 125g",
+    "brand": "Maliban",
+    "size": "125g",
+    "qty": 2,
+    "sellPrice": 140.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-041",
+    "category": "Biscuits & Wafers",
+    "name": "Cream Cracker 85g",
+    "brand": "Maliban",
+    "size": "85g",
+    "qty": 2,
+    "sellPrice": 100.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-042",
+    "category": "Biscuits & Wafers",
+    "name": "Hawaiian Cookies 100g",
+    "brand": "Maliban",
+    "size": "100g",
+    "qty": 2,
+    "sellPrice": 140.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-043",
+    "category": "Biscuits & Wafers",
+    "name": "Gold Marie 160g",
+    "brand": "Maliban",
+    "size": "160g",
+    "qty": 2,
+    "sellPrice": 190.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-044",
+    "category": "Biscuits & Wafers",
+    "name": "Gold Marie 240g",
+    "brand": "Maliban",
+    "size": "240g",
+    "qty": 3,
+    "sellPrice": 250.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-045",
+    "category": "Biscuits & Wafers",
+    "name": "Gold Marie 80g",
+    "brand": "Maliban",
+    "size": "80g",
+    "qty": 13,
+    "sellPrice": 90.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-046",
+    "category": "Biscuits & Wafers",
+    "name": "Milk Shorties 85g",
+    "brand": "Maliban",
+    "size": "85g",
+    "qty": 7,
+    "sellPrice": 120.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-047",
+    "category": "Biscuits & Wafers",
+    "name": "Light Marie 50g",
+    "brand": "Maliban",
+    "size": "50g",
+    "qty": 9,
+    "sellPrice": 50.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-048",
+    "category": "Biscuits & Wafers",
+    "name": "YoYo Vanilla/Chocolate 50g",
+    "brand": "Maliban",
+    "size": "50g",
+    "qty": 8,
+    "sellPrice": 50.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-049",
+    "category": "Biscuits & Wafers",
+    "name": "Chocolate Marie 80g",
+    "brand": "Maliban",
+    "size": "80g",
+    "qty": 5,
+    "sellPrice": 100.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-050",
+    "category": "Biscuits & Wafers",
+    "name": "Chocolate Puff 100g",
+    "brand": "Maliban",
+    "size": "100g",
+    "qty": 1,
+    "sellPrice": 140.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-051",
+    "category": "Biscuits & Wafers",
+    "name": "Real Chocolate Cream Biscuit 200g",
+    "brand": "Maliban",
+    "size": "200g",
+    "qty": 3,
+    "sellPrice": 260.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "BIS-052",
+    "category": "Biscuits & Wafers",
+    "name": "Real Chocolate Cream Biscuit 400g",
+    "brand": "Maliban",
+    "size": "400g",
+    "qty": 3,
+    "sellPrice": 490.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-001",
+    "category": "Chocolate",
+    "name": "Kandos Raisin Bar 45g",
+    "brand": "Kandos",
+    "size": "45g",
+    "qty": 16,
+    "sellPrice": 120.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-002",
+    "category": "Chocolate",
+    "name": "Kandos Peanut Ball 50g",
+    "brand": "Kandos",
+    "size": "50g",
+    "qty": 7,
+    "sellPrice": 200.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-003",
+    "category": "Chocolate",
+    "name": "Milk Choco Bar 45g",
+    "brand": null,
+    "size": "45g",
+    "qty": 9,
+    "sellPrice": 260.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-004",
+    "category": "Chocolate",
+    "name": "Cashew Nut Bar 45g",
+    "brand": null,
+    "size": "45g",
+    "qty": 6,
+    "sellPrice": 299.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-005",
+    "category": "Chocolate",
+    "name": "Peanut Ball 40g",
+    "brand": null,
+    "size": "40g",
+    "qty": 15,
+    "sellPrice": 100.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-006",
+    "category": "Chocolate",
+    "name": "Milk Choco 110g",
+    "brand": null,
+    "size": "110g",
+    "qty": 4,
+    "sellPrice": 320.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-007",
+    "category": "Chocolate",
+    "name": "Milk Choco Pistachio 110g",
+    "brand": null,
+    "size": "110g",
+    "qty": 3,
+    "sellPrice": 900.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-008",
+    "category": "Chocolate",
+    "name": "Peanut Bar 100g",
+    "brand": null,
+    "size": "100g",
+    "qty": 5,
+    "sellPrice": 100.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-009",
+    "category": "Chocolate",
+    "name": "Peanut Choco 105g",
+    "brand": null,
+    "size": "105g",
+    "qty": 1,
+    "sellPrice": 250.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-010",
+    "category": "Chocolate",
+    "name": "White Choco 65g",
+    "brand": null,
+    "size": "65g",
+    "qty": 2,
+    "sellPrice": 150.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-011",
+    "category": "Chocolate",
+    "name": "Choco Bar 37g",
+    "brand": null,
+    "size": "37g",
+    "qty": 5,
+    "sellPrice": 100.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-012",
+    "category": "Water",
+    "name": "Water Bottle 500ml",
+    "brand": null,
+    "size": "500ml",
+    "qty": 83,
+    "sellPrice": 80.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-013",
+    "category": "Water",
+    "name": "Water Bottle 1000ml",
+    "brand": null,
+    "size": "1000ml",
+    "qty": 37,
+    "sellPrice": 120.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-014",
+    "category": "Snacks",
+    "name": "Starz - Mr Pop 25g",
+    "brand": "Mr Pop",
+    "size": "25g",
+    "qty": 13,
+    "sellPrice": 100.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-015",
+    "category": "Snacks",
+    "name": "Cassava Chips - Topas 35g",
+    "brand": "Topas",
+    "size": "35g",
+    "qty": 16,
+    "sellPrice": 100.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-016",
+    "category": "Snacks",
+    "name": "Singhe Product - Sinhala name unclear 1 75g",
+    "brand": "Singhe",
+    "size": "75g",
+    "qty": 15,
+    "sellPrice": 100.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-017",
+    "category": "Snacks",
+    "name": "Singhe Product - Sinhala name unclear 2 120g",
+    "brand": "Singhe",
+    "size": "120g",
+    "qty": 26,
+    "sellPrice": 200.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-018",
+    "category": "Snacks",
+    "name": "Singhe Product - Sinhala name unclear 3 150g",
+    "brand": "Singhe",
+    "size": "150g",
+    "qty": 28,
+    "sellPrice": 250.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-019",
+    "category": "Snacks",
+    "name": "Singhe Product - Sinhala name unclear 4 60g",
+    "brand": "Singhe",
+    "size": "60g",
+    "qty": 34,
+    "sellPrice": 100.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-020",
+    "category": "Snacks",
+    "name": "Tip Chips - Dila Product 40g",
+    "brand": "Dila",
+    "size": "40g",
+    "qty": 37,
+    "sellPrice": 100.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-021",
+    "category": "Snacks",
+    "name": "Unspecified Dila Product 40g",
+    "brand": "Dila",
+    "size": "40g",
+    "qty": 40,
+    "sellPrice": 100.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-022",
+    "category": "Snacks",
+    "name": "Masala Peanut 60g",
+    "brand": null,
+    "size": "60g",
+    "qty": 26,
+    "sellPrice": 100.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-023",
+    "category": "Snacks",
+    "name": "Masala Bites",
+    "brand": null,
+    "size": null,
+    "qty": 0,
+    "sellPrice": 0.0,
+    "buyPrice": 0.0
+  },
+  {
+    "sku": "OTH-024",
+    "category": "Snacks",
+    "name": "Necto",
+    "brand": null,
+    "size": null,
+    "qty": 11,
+    "sellPrice": 0.0,
+    "buyPrice": 0.0
+  }
+]

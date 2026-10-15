@@ -23,6 +23,8 @@ export default function QuickCreateProductModal({
         unitOfMeasure: 'pcs',
         basePrice: 0,
         purchasePrice: 0,
+        trackStock: true,
+        isWeightBased: false,
         canBeSold: defaultProductType !== 'raw_material',
         canBePurchased: true,
     });
@@ -31,8 +33,24 @@ export default function QuickCreateProductModal({
     const { data: categoriesData } = useCategories({ isActive: 'true' });
     const { data: uomsData } = useUoms();
 
+    const defaultUoms = [
+        { value: 'pcs', label: 'Pieces (pcs)' },
+        { value: 'kg', label: 'Kilograms (kg)' },
+        { value: 'g', label: 'Grams (g)' },
+        { value: 'pkt', label: 'Packets (pkt)' },
+        { value: 'box', label: 'Boxes (box)' },
+        { value: 'bottle', label: 'Bottles (bottle)' },
+        { value: 'can', label: 'Cans (can)' },
+        { value: 'portion', label: 'Portion (portion)' },
+        { value: 'cup', label: 'Cups (cup)' },
+        { value: 'ltr', label: 'Liters (ltr)' },
+        { value: 'ml', label: 'Milliliters (ml)' },
+    ];
+
     const categoryOptions = (categoriesData?.data || []).map((c) => ({ value: c._id, label: c.name }));
-    const uomOptions = (uomsData?.data || []).map((u) => ({ value: u.code, label: `${u.name} (${u.code})` }));
+    const uomOptions = (uomsData?.data && uomsData.data.length > 0)
+        ? uomsData.data.map((u) => ({ value: u.symbol || u.code, label: `${u.name} (${u.symbol || u.code})` }))
+        : defaultUoms;
 
     const submit = async () => {
         if (!form.name) { toast.error('Product name required'); return; }
@@ -41,6 +59,8 @@ export default function QuickCreateProductModal({
             const result = await createMutation.mutateAsync({
                 name: form.name,
                 productType: form.productType,
+                trackStock: form.trackStock,
+                isWeightBased: form.isWeightBased,
                 categoryId: form.categoryId || undefined,
                 unitOfMeasure: form.unitOfMeasure,
                 basePrice: +form.basePrice || 0,
@@ -57,7 +77,8 @@ export default function QuickCreateProductModal({
 
             setForm({
                 name: '', productType: defaultProductType, categoryId: '',
-                unitOfMeasure: 'pcs', basePrice: 0, purchasePrice: 0,
+                unitOfMeasure: 'pcs', basePrice: 0, purchasePrice: 0, trackStock: true,
+                isWeightBased: false,
                 canBeSold: defaultProductType !== 'raw_material', canBePurchased: true,
             });
 
@@ -113,18 +134,38 @@ export default function QuickCreateProductModal({
                         onChange={(e) => setForm((f) => ({ ...f, purchasePrice: e.target.value }))} />
                 </div>
 
-                <div className="flex gap-4 text-sm">
-                    <label className="flex items-center gap-2">
+                <div className="flex flex-wrap gap-4 text-sm pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" checked={form.canBeSold}
                             onChange={(e) => setForm((f) => ({ ...f, canBeSold: e.target.checked }))} />
                         Can be sold
                     </label>
-                    <label className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" checked={form.canBePurchased}
                             onChange={(e) => setForm((f) => ({ ...f, canBePurchased: e.target.checked }))} />
                         Can be purchased
                     </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-amber-800 font-medium">
+                        <input type="checkbox" checked={form.trackStock}
+                            onChange={(e) => setForm((f) => ({ ...f, trackStock: e.target.checked }))} />
+                        Track Stock
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-indigo-700 font-medium">
+                        <input type="checkbox" checked={form.isWeightBased}
+                            onChange={(e) => setForm((f) => ({ ...f, isWeightBased: e.target.checked }))} />
+                        ⚖️ Sold by Weight (Grams/KG)
+                    </label>
                 </div>
+                {form.isWeightBased && (
+                    <p className="text-[11px] text-indigo-700 bg-indigo-50 p-2 rounded border border-indigo-200">
+                        ⚖️ Loose/bulk item: POS will open Grams Selector (e.g. 50g, 100g, 250g) and calculate price from 1KG price.
+                    </p>
+                )}
+                {!form.trackStock && (
+                    <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+                        ⚡ Non-stock product: will be sellable in POS anytime without entering stock (e.g. Nestea, Nescafe).
+                    </p>
+                )}
             </div>
             <div className="flex justify-end gap-2 px-6 py-4 border-t bg-gray-50">
                 <Button variant="outline" onClick={onClose}>Cancel</Button>

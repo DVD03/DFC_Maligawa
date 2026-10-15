@@ -3,6 +3,16 @@ import mongoose from 'mongoose';
 import Product from '../models/Product.js';
 
 export const createProduct = asyncHandler(async (req, res) => {
+    // If categoryId is missing, pick default or first category
+    if (!req.body.categoryId) {
+        const Category = mongoose.model('Category');
+        const defCat = await Category.findOne({ code: 'GEN' }) || await Category.findOne();
+        if (defCat) req.body.categoryId = defCat._id;
+    }
+    if (req.body.brandId === '' || !req.body.brandId) {
+        delete req.body.brandId;
+    }
+
     const product = await Product.create({
         ...req.body,
         createdBy: req.user._id,
@@ -15,7 +25,7 @@ export const createProduct = asyncHandler(async (req, res) => {
         const StockItem = mongoose.model('StockItem');
         const defaultWh = await Warehouse.findOne({ isDefault: true }) || await Warehouse.findOne();
         
-        if (defaultWh) {
+        if (defaultWh && product.trackStock !== false && product.type !== 'service' && product.productType !== 'service') {
             await StockItem.create({
                 productId: product._id,
                 warehouseId: defaultWh._id,

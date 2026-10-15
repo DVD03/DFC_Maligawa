@@ -176,22 +176,33 @@ export const createSalesOrder = asyncHandler(async (req, res) => {
             // Deduct stock if approved (common for POS)
             if (order.status === 'approved') {
                 for (const item of order.items) {
-                    const stockItem = await StockItem.findOne({
-                        productId: item.productId,
-                        warehouseId: warehouse._id,
-                        batchNumber: null,
-                    }).session(session);
+                    const product = await Product.findById(item.productId).session(session);
+                    const isNonStock = !product 
+                        || product.trackStock === false 
+                        || product.type === 'service' 
+                        || product.productType === 'service'
+                        || /nescafe|nestea|plain tea|milk tea|coffee/i.test(product.name || '')
+                        || /nescafe|nestea|plain tea|milk tea|coffee/i.test(item.productName || '');
+                    const shouldTrackStock = !isNonStock;
 
-                    if (!stockItem || stockItem.quantities.onHand < item.orderedQuantity) {
-                        throw new Error(`Insufficient stock for "${item.productName}"`);
+                    if (shouldTrackStock) {
+                        const stockItem = await StockItem.findOne({
+                            productId: item.productId,
+                            warehouseId: warehouse._id,
+                            batchNumber: null,
+                        }).session(session);
+
+                        if (!stockItem || stockItem.quantities.onHand < item.orderedQuantity) {
+                            throw new Error(`Insufficient stock for "${item.productName}"`);
+                        }
+
+                        await decreaseStock({
+                            productId: item.productId, warehouseId: warehouse._id,
+                            quantity: item.orderedQuantity, movementType: 'sale_dispatch',
+                            sourceDocument: { type: 'sales_order', id: order._id, number: order.orderNumber },
+                            reason: 'Order created as approved', userId: req.user._id, session,
+                        });
                     }
-
-                    await decreaseStock({
-                        productId: item.productId, warehouseId: warehouse._id,
-                        quantity: item.orderedQuantity, movementType: 'sale_dispatch',
-                        sourceDocument: { type: 'sales_order', id: order._id, number: order.orderNumber },
-                        reason: 'Order created as approved', userId: req.user._id, session,
-                    });
                     item.dispatchedQuantity = item.orderedQuantity;
                     item.lineStatus = 'dispatched';
                 }
@@ -469,40 +480,51 @@ export const changeSalesOrderStatus = asyncHandler(async (req, res) => {
             // ─── APPROVE: deduct stock immediately from warehouse ───────────────
             if (status === 'approved' && order.status !== 'approved') {
                 for (const item of order.items) {
-                    // Check that stock exists and is sufficient
-                    const stockItem = await StockItem.findOne({
-                        productId: item.productId,
-                        warehouseId,
-                        batchNumber: null,
-                    }).session(session);
+                    const product = await Product.findById(item.productId).session(session);
+                    const isNonStock = !product 
+                        || product.trackStock === false 
+                        || product.type === 'service' 
+                        || product.productType === 'service'
+                        || /nescafe|nestea|plain tea|milk tea|coffee/i.test(product.name || '')
+                        || /nescafe|nestea|plain tea|milk tea|coffee/i.test(item.productName || '');
+                    const shouldTrackStock = !isNonStock;
 
-                    if (!stockItem) {
-                        throw new Error(
-                            `No stock record found for "${item.productName}" in the selected warehouse. Please enter opening stock first.`
-                        );
+                    if (shouldTrackStock) {
+                        // Check that stock exists and is sufficient
+                        const stockItem = await StockItem.findOne({
+                            productId: item.productId,
+                            warehouseId,
+                            batchNumber: null,
+                        }).session(session);
+
+                        if (!stockItem) {
+                            throw new Error(
+                                `No stock record found for "${item.productName}" in the selected warehouse. Please enter opening stock first.`
+                            );
+                        }
+
+                        if (stockItem.quantities.onHand < item.orderedQuantity) {
+                            throw new Error(
+                                `Insufficient stock for "${item.productName}". On hand: ${stockItem.quantities.onHand}, ordered: ${item.orderedQuantity}`
+                            );
+                        }
+
+                        // Directly deduct onHand — stock leaves warehouse on approval
+                        await decreaseStock({
+                            productId: item.productId,
+                            warehouseId,
+                            quantity: item.orderedQuantity,
+                            movementType: 'sale_dispatch',
+                            sourceDocument: {
+                                type: 'sales_order',
+                                id: order._id,
+                                number: order.orderNumber,
+                            },
+                            reason: 'Sales order approved',
+                            userId: req.user._id,
+                            session,
+                        });
                     }
-
-                    if (stockItem.quantities.onHand < item.orderedQuantity) {
-                        throw new Error(
-                            `Insufficient stock for "${item.productName}". On hand: ${stockItem.quantities.onHand}, ordered: ${item.orderedQuantity}`
-                        );
-                    }
-
-                    // Directly deduct onHand — stock leaves warehouse on approval
-                    await decreaseStock({
-                        productId: item.productId,
-                        warehouseId,
-                        quantity: item.orderedQuantity,
-                        movementType: 'sale_dispatch',
-                        sourceDocument: {
-                            type: 'sales_order',
-                            id: order._id,
-                            number: order.orderNumber,
-                        },
-                        reason: 'Sales order approved',
-                        userId: req.user._id,
-                        session,
-                    });
 
                     item.dispatchedQuantity = item.orderedQuantity;
                     item.lineStatus = 'dispatched';
@@ -535,25 +557,36 @@ export const changeSalesOrderStatus = asyncHandler(async (req, res) => {
             // ─── CANCELLED: restore stock only if order was already approved ─────
             if (status === 'cancelled' && ['approved', 'dispatched', 'on_hold'].includes(order.status)) {
                 for (const item of order.items) {
-                    try {
-                        await increaseStock({
-                            productId: item.productId,
-                            warehouseId,
-                            quantity: item.orderedQuantity,
-                            costPerUnit: 0,
-                            movementType: 'sale_return',
-                            sourceDocument: {
-                                type: 'sales_order',
-                                id: order._id,
-                                number: order.orderNumber,
-                            },
-                            reason: reason || 'Order cancelled — stock restored',
-                            userId: req.user._id,
-                            session,
-                        });
-                    } catch (stockErr) {
-                        // Non-fatal: log but don't block cancellation
-                        console.warn(`Stock restore failed for ${item.productName}:`, stockErr.message);
+                    const product = await Product.findById(item.productId).session(session);
+                    const isNonStock = !product 
+                        || product.trackStock === false 
+                        || product.type === 'service' 
+                        || product.productType === 'service'
+                        || /nescafe|nestea|plain tea|milk tea|coffee/i.test(product.name || '')
+                        || /nescafe|nestea|plain tea|milk tea|coffee/i.test(item.productName || '');
+                    const shouldTrackStock = !isNonStock;
+
+                    if (shouldTrackStock) {
+                        try {
+                            await increaseStock({
+                                productId: item.productId,
+                                warehouseId,
+                                quantity: item.orderedQuantity,
+                                costPerUnit: 0,
+                                movementType: 'sale_return',
+                                sourceDocument: {
+                                    type: 'sales_order',
+                                    id: order._id,
+                                    number: order.orderNumber,
+                                },
+                                reason: reason || 'Order cancelled — stock restored',
+                                userId: req.user._id,
+                                session,
+                            });
+                        } catch (stockErr) {
+                            // Non-fatal: log but don't block cancellation
+                            console.warn(`Stock restore failed for ${item.productName}:`, stockErr.message);
+                        }
                     }
                 }
             }

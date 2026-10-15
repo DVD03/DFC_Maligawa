@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // Mongo ObjectId validator
-const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ID format');
+const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ID format').or(z.literal('')).nullable();
 
 export const createCategorySchema = z.object({
     name: z.string().min(1).max(100),
@@ -39,13 +39,15 @@ export const createProductSchema = z.object({
     barcode: z.string().max(50).optional(),
     name: z.string().min(1).max(200),
     productType: z.enum(['finished_good', 'raw_material', 'semi_finished', 'packaging', 'service', 'consumable']).optional(),
+    trackStock: z.boolean().optional(),
+    isWeightBased: z.boolean().optional(),
     canBeManufactured: z.boolean().optional(),
     canBePurchased: z.boolean().optional(),
     canBeSold: z.boolean().optional(),
     shortName: z.string().max(100).optional(),
     description: z.string().max(2000).optional(),
-    categoryId: objectId,
-    brandId: objectId.optional(),
+    categoryId: objectId.optional(),
+    brandId: objectId.optional().nullable(),
     tags: z.array(z.string()).optional(),
     type: z.enum(['manufactured', 'trading', 'service', 'bundle']).optional(),
     unitOfMeasure: z.string().min(1),

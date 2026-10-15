@@ -32,6 +32,8 @@ const productSchema = new mongoose.Schema(
             enum: ['finished_good', 'raw_material', 'semi_finished', 'packaging', 'service', 'consumable'],
             default: 'finished_good',
         },
+        trackStock: { type: Boolean, default: true, index: true },
+        isWeightBased: { type: Boolean, default: false, index: true },
         isBakeryItem: { type: Boolean, default: false, index: true },
         canBeManufactured: { type: Boolean, default: false },
         canBePurchased: { type: Boolean, default: true },

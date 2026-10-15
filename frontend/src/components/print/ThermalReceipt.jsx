@@ -113,7 +113,11 @@ const ThermalReceipt = forwardRef(({ invoice, payments = [], companyInfo: propCo
                         <div key={idx} className="leading-tight">
                             <div className="font-bold text-gray-900 pr-2">{item.productName}</div>
                             <div className="flex justify-between mt-1 text-gray-600">
-                                <span>{item.quantity} x {fmt(item.unitPrice)}</span>
+                                <span>
+                                    {item.quantity < 1 
+                                        ? `${Math.round(item.quantity * 1000)}g (${item.quantity} kg)` 
+                                        : item.quantity} x {fmt(item.unitPrice)}
+                                </span>
                                 <span className="font-bold text-black text-[13px]">{fmt(lineTotal)}</span>
                             </div>
                             {item.discountPercent > 0 && (
