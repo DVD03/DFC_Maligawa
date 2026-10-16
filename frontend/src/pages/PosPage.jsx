@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     Search, Plus, Minus, Trash2, ShoppingCart, Save, X,
     Package, AlertCircle, UserPlus, PackagePlus, CreditCard,
     CheckCircle, ArrowLeft, LayoutGrid, List,
     Banknote, QrCode, Split, Zap, DollarSign, Wallet, FileText, ArrowRight,
-    Wifi, WifiOff, RefreshCw, Scale
+    Wifi, WifiOff, RefreshCw, Scale, Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -24,6 +24,7 @@ import { useCategories } from '../features/products/useProducts';
 import { useCreateSalesOrder } from '../features/salesOrders/useSalesOrders';
 import { useCreateCustomer } from '../features/customers/useCustomers';
 import QuickCreateCustomerModal from '../features/customers/QuickCreateCustomerModal';
+import QuickCustomItemModal from '../features/products/QuickCustomItemModal';
 import { posSessionsApi } from '../features/posSessions/posSessionsApi';
 import PosSessionModal from '../features/posSessions/PosSessionModal';
 import CloseRegisterModal from '../features/posSessions/CloseRegisterModal';
@@ -38,6 +39,7 @@ import { useMobile } from '../hooks/useMobile';
 export default function PosPage() {
     const { user } = useAuthStore();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const createOrder = useCreateSalesOrder();
     const isMobile = useMobile();
     const [showCartOnMobile, setShowCartOnMobile] = useState(false);
@@ -63,6 +65,10 @@ export default function PosPage() {
     const [orderDiscountPercent, setOrderDiscountPercent] = useState(0);
     const [orderDiscountAmount, setOrderDiscountAmount] = useState(0);
     const createCustomer = useCreateCustomer();
+
+    // Custom Open Item Modal
+    const [isCustomItemOpen, setIsCustomItemOpen] = useState(false);
+    const [customItemInitialName, setCustomItemInitialName] = useState('');
 
     // Payment Modals & Options
     const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -347,18 +353,13 @@ export default function PosPage() {
         const stock = stockMap.get(product._id);
         const available = isNonStock ? 999999 : (stock ? Math.max(0, stock.onHand - stock.reserved) : (!isOnline ? 999999 : 0));
 
-        if (!isNonStock && isOnline && available <= 0) {
-            toast.error(`${product.name} is out of stock at this warehouse`);
-            return;
+        if (!isNonStock && available <= 0) {
+            toast(`${product.name}: 0 in stock (selling on negative balance)`, { icon: '⚠️', duration: 1800 });
         }
 
         setCart((prev) => {
             const existing = prev.find((i) => i.productId === product._id);
             if (existing) {
-                if (!isNonStock && existing.qty >= available) {
-                    toast.error(`Only ${available} available`);
-                    return prev;
-                }
                 const newQty = +(existing.qty + 1).toFixed(3);
                 const tierPrice = getTierPrice(product, newQty);
                 let price = tierPrice;
@@ -390,6 +391,69 @@ export default function PosPage() {
         });
     };
 
+    // Custom Open Item Added Handler
+    const handleCustomItemAdded = (product, requestedQty = 1, customPrice = null) => {
+        queryClient.invalidateQueries({ queryKey: ['products'] });
+        const basePrice = customPrice !== null ? customPrice : (product.basePrice || 0);
+        const pid = product._id;
+        setCart((prev) => {
+            const existing = prev.find((i) => i.productId === pid);
+            if (existing) {
+                return prev.map((i) => i.productId === pid ? { ...i, qty: +(i.qty + requestedQty).toFixed(3), price: basePrice } : i);
+            }
+            return [...prev, {
+                productId: pid,
+                name: product.name,
+                code: product.productCode || product.code || 'OPEN-ITEM',
+                price: basePrice,
+                qty: requestedQty,
+                available: 999999,
+                isNonStock: true,
+                unitOfMeasure: product.unitOfMeasure || 'pcs',
+                tierPricing: product.tierPricing || [],
+                basePrice: basePrice,
+            }];
+        });
+    };
+
+    // Helper to add Toffee / Small change items to cart
+    const handleAddChangeItem = async (amount, label = 'Toffee') => {
+        const toffeeName = `${label} Rs.${amount}`;
+        let prod = products.find((p) => p.name.toLowerCase() === toffeeName.toLowerCase());
+
+        if (!prod) {
+            try {
+                const res = await productsApi.create({
+                    name: toffeeName,
+                    productType: 'finished_good',
+                    basePrice: amount,
+                    purchasePrice: +(amount * 0.6).toFixed(2),
+                    unitOfMeasure: 'pcs',
+                    trackStock: false,
+                    canBeSold: true,
+                    status: 'active',
+                });
+                prod = res?.data;
+                queryClient.invalidateQueries({ queryKey: ['products'] });
+            } catch (err) {
+                prod = products[0];
+            }
+        }
+
+        if (prod) {
+            addToCart({
+                ...prod,
+                name: toffeeName,
+                basePrice: amount,
+                price: amount,
+            });
+            toast.success(`Added ${toffeeName} to bill!`);
+            const currentCash = parseFloat(calculatorCashReceived) || 0;
+            const newTotal = totals.grandTotal + amount;
+            setCalculatorChangeReturned(Math.max(0, currentCash - newTotal));
+        }
+    };
+
     const updateQty = (productId, delta) => {
         setCart((prev) => prev.map((i) => {
             if (i.productId !== productId) return i;
@@ -397,10 +461,6 @@ export default function PosPage() {
             const step = isWeight && i.qty <= 1 ? (delta > 0 ? 0.05 : -0.05) : delta;
             const newQty = +(i.qty + step).toFixed(3);
             if (newQty <= 0) return null;
-            if (!i.isNonStock && newQty > i.available) {
-                toast.error(`Only ${i.available} available`);
-                return i;
-            }
             // Recalculate tier price on qty change
             const newPrice = getTierPrice({ basePrice: i.basePrice || i.price, tierPricing: i.tierPricing || [] }, newQty);
             let finalPrice = newPrice;
@@ -415,10 +475,6 @@ export default function PosPage() {
         setCart((prev) => prev.map((i) => {
             if (i.productId !== productId) return i;
             const newQty = Math.max(0, parseFloat(qty) || 0);
-            if (!i.isNonStock && newQty > i.available) {
-                toast.error(`Only ${i.available} available`);
-                return i;
-            }
             // Recalculate tier price on qty change
             const newPrice = getTierPrice({ basePrice: i.basePrice || i.price, tierPricing: i.tierPricing || [] }, newQty);
             let finalPrice = newPrice;
@@ -811,8 +867,8 @@ export default function PosPage() {
                 {/* Left: Product catalog */}
                 <div className="flex-1 flex flex-col bg-gray-50 p-4 overflow-hidden flex">
                     {/* Search */}
-                    <div className="flex gap-2 mb-3">
-                        <div className="relative flex-1">
+                    <div className="flex flex-wrap sm:flex-nowrap gap-2 mb-3">
+                        <div className="relative flex-1 min-w-[200px]">
                             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                             <input
                                 type="text"
@@ -822,6 +878,33 @@ export default function PosPage() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
+
+                        {/* + Quick Custom / Open Item Button */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setCustomItemInitialName(searchQuery.trim());
+                                setIsCustomItemOpen(true);
+                            }}
+                            className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition whitespace-nowrap shrink-0"
+                            title="Sell custom or unlisted food item directly at POS"
+                        >
+                            <Sparkles size={14} className="text-amber-200" />
+                            <span>+ Custom Item</span>
+                        </button>
+
+                        {/* Quick Toffee Button */}
+                        <button
+                            type="button"
+                            onClick={() => handleAddChangeItem(10, 'Toffee')}
+                            className="px-3 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition whitespace-nowrap shrink-0 active:scale-95"
+                            title="Quickly add Rs. 10 Toffee to bill"
+                        >
+                            <span>🍬</span>
+                            <span className="hidden sm:inline">Toffee Rs.10</span>
+                            <span className="sm:hidden">Rs.10</span>
+                        </button>
+
                         {/* View toggle */}
                         <div className="flex bg-gray-150 border border-gray-200 rounded-lg p-0.5 shrink-0 bg-white">
                             <button
@@ -862,9 +945,29 @@ export default function PosPage() {
                     {/* Product Catalog */}
                     <div className="flex-1 overflow-y-auto">
                         {filteredProducts.length === 0 ? (
-                            <div className="text-center py-16 text-gray-500">
-                                <Package size={32} className="mx-auto mb-2 text-gray-300" />
-                                <p>No products found</p>
+                            <div className="flex flex-col items-center justify-center p-8 bg-white rounded-2xl border border-dashed border-amber-300 text-center space-y-3 my-4">
+                                <div className="p-3 bg-amber-50 text-amber-600 rounded-full">
+                                    <Sparkles size={24} />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-gray-800">
+                                        {searchQuery ? `"${searchQuery}" not found in system` : 'No products found'}
+                                    </p>
+                                    <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                                        Don't let the customer wait! You can sell this item directly in seconds.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setCustomItemInitialName(searchQuery.trim());
+                                        setIsCustomItemOpen(true);
+                                    }}
+                                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm transition"
+                                >
+                                    <Plus size={15} />
+                                    <span>+ Quick Sell "{searchQuery || 'New Food Item'}"</span>
+                                </button>
                             </div>
                         ) : viewMode === 'list' ? (
                             <div className="flex flex-col gap-2">
@@ -879,11 +982,9 @@ export default function PosPage() {
                                         <button
                                             key={p._id}
                                             onClick={() => handleProductClick(p)}
-                                            disabled={outOfStock}
-                                            className={`text-left bg-white border rounded-xl p-3 flex items-center justify-between transition-all ${outOfStock
-                                                ? 'opacity-50 cursor-not-allowed'
-                                                : 'hover:shadow-md hover:border-gray-300 active:scale-[0.99]'
-                                                } ${inCart > 0 ? 'border-primary-500 bg-primary-50/50 ring-1 ring-primary-500' : ''}`}
+                                            className={`text-left bg-white border rounded-xl p-3 flex items-center justify-between transition-all hover:shadow-md hover:border-gray-300 active:scale-[0.99] ${
+                                                outOfStock ? 'border-amber-200 bg-amber-50/20' : ''
+                                            } ${inCart > 0 ? 'border-primary-500 bg-primary-50/50 ring-1 ring-primary-500' : ''}`}
                                         >
                                             <div className="min-w-0 flex-1 pr-4">
                                                 <div className="flex items-center gap-2 mb-0.5 flex-wrap">
@@ -909,8 +1010,8 @@ export default function PosPage() {
                                                                 Non-Stock (Available)
                                                             </span>
                                                         ) : (
-                                                            <span className={`font-bold ${available <= 5 ? 'text-amber-600' : 'text-gray-700'}`}>
-                                                                {available} {p.unitOfMeasure || 'pcs'}
+                                                            <span className={`font-bold ${available <= 0 ? 'text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded text-[10px]' : available <= 5 ? 'text-amber-600' : 'text-gray-700'}`}>
+                                                                {available <= 0 ? '0 (Sellable)' : `${available} ${p.unitOfMeasure || 'pcs'}`}
                                                             </span>
                                                         )}
                                                     </span>
@@ -921,8 +1022,8 @@ export default function PosPage() {
                                                     <p className="text-sm font-black text-primary-600">{fmt(p.basePrice)}</p>
                                                     {isWeightProduct(p) && <p className="text-[10px] text-amber-700 font-medium">/ 1 KG</p>}
                                                 </div>
-                                                <Badge variant={outOfStock ? 'danger' : isNonStock ? 'info' : available <= 5 ? 'warning' : 'success'} className="px-2 py-0.5 text-xs font-semibold">
-                                                    {outOfStock ? 'Out of Stock' : isNonStock ? 'Always Available' : 'Available'}
+                                                <Badge variant={outOfStock ? 'warning' : isNonStock ? 'info' : available <= 5 ? 'warning' : 'success'} className="px-2 py-0.5 text-xs font-semibold">
+                                                    {outOfStock ? '0 Stock (Sellable)' : isNonStock ? 'Always Available' : 'Available'}
                                                 </Badge>
                                             </div>
                                         </button>
@@ -942,11 +1043,10 @@ export default function PosPage() {
                                         <button
                                             key={p._id}
                                             onClick={() => handleProductClick(p)}
-                                            disabled={outOfStock}
-                                            className={`relative text-left bg-white border rounded-xl p-3 flex flex-col justify-between transition-all min-h-[96px] ${outOfStock
-                                                ? 'opacity-50 cursor-not-allowed'
-                                                : 'hover:shadow-md active:scale-95 hover:border-primary-300'
-                                                } ${inCart > 0 ? 'border-primary-500 bg-primary-50/50 ring-1 ring-primary-500' : ''}`}>
+                                            className={`relative text-left bg-white border rounded-xl p-3 flex flex-col justify-between transition-all min-h-[96px] hover:shadow-md active:scale-95 ${
+                                                outOfStock ? 'border-amber-200 bg-amber-50/20' : 'hover:border-primary-300'
+                                            } ${inCart > 0 ? 'border-primary-500 bg-primary-50/50 ring-1 ring-primary-500' : ''}`}
+                                        >
                                             <div>
                                                 <p className="text-xs font-bold text-gray-800 line-clamp-2 mb-0.5 leading-snug">{p.name}</p>
                                                 <div className="flex items-center justify-between">
@@ -963,8 +1063,8 @@ export default function PosPage() {
                                                     <p className="text-xs font-extrabold text-primary-600">{fmt(p.basePrice)}</p>
                                                     {isWeightProduct(p) && <p className="text-[9px] text-amber-700">per 1 KG</p>}
                                                 </div>
-                                                <span className={`text-[10px] font-bold ${outOfStock ? 'text-red-500' : isNonStock ? 'text-blue-600' : available <= 5 ? 'text-amber-500' : 'text-green-600'}`}>
-                                                    {outOfStock ? 'Out' : isNonStock ? 'Available' : `${available} Left`}
+                                                <span className={`text-[10px] font-bold ${outOfStock ? 'text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded' : isNonStock ? 'text-blue-600' : available <= 5 ? 'text-amber-500' : 'text-green-600'}`}>
+                                                    {outOfStock ? '0 Stock' : isNonStock ? 'Available' : `${available} Left`}
                                                 </span>
                                             </div>
                                             {inCart > 0 && (
@@ -1016,7 +1116,14 @@ export default function PosPage() {
                                     <div className="flex items-start justify-between mb-2">
                                         <div className="flex-1 min-w-0 pr-2">
                                             <p className="text-sm font-bold text-gray-900 break-words leading-tight">{item.name}</p>
-                                            <p className="text-[10px] text-gray-500 font-mono mt-0.5">{item.code}</p>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                <span className="text-[10px] text-gray-500 font-mono">{item.code}</span>
+                                                {item.available <= 0 && !item.isNonStock && (
+                                                    <span className="text-[9px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-1 py-0.2 rounded">
+                                                        0 Stock (Negative)
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         <button onClick={() => removeFromCart(item.productId)}
                                             className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0">
@@ -1030,7 +1137,7 @@ export default function PosPage() {
                                                     className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 text-gray-500 rounded-md transition-colors">
                                                     <Minus size={13} />
                                                 </button>
-                                                <input type="number" step="any" min="0.001" value={item.qty} max={item.isNonStock ? undefined : item.available}
+                                                <input type="number" step="any" min="0.001" value={item.qty}
                                                     onChange={(e) => setQty(item.productId, e.target.value)}
                                                     className="w-12 text-center text-xs font-bold bg-transparent border-0 focus:ring-0 p-0" />
                                                 <button onClick={() => updateQty(item.productId, 1)}
@@ -1342,6 +1449,51 @@ export default function PosPage() {
                                     <CheckCircle size={26} />
                                 </div>
                             </div>
+
+                            {/* Toffee as Change Options */}
+                            {calculatorChangeReturned > 0 && (
+                                <div className="bg-amber-50 rounded-xl p-3 border border-amber-200 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-lg">🍬</span>
+                                            <span className="text-xs font-bold text-amber-900">No Coins? Give Toffee as Change:</span>
+                                        </div>
+                                        <span className="text-[11px] font-medium text-amber-700">Auto-updates bill & stock</span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {calculatorChangeReturned >= 10 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAddChangeItem(10, 'Toffee')}
+                                                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs transition active:scale-95 flex items-center gap-1"
+                                            >
+                                                <span>🍬</span>
+                                                <span>Give Rs. 10 Toffee</span>
+                                            </button>
+                                        )}
+                                        {calculatorChangeReturned >= 5 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAddChangeItem(5, 'Toffee')}
+                                                className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg shadow-2xs transition active:scale-95 flex items-center gap-1"
+                                            >
+                                                <span>🍬</span>
+                                                <span>Give Rs. 5 Toffee</span>
+                                            </button>
+                                        )}
+                                        {calculatorChangeReturned > 0 && calculatorChangeReturned !== 10 && calculatorChangeReturned !== 5 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAddChangeItem(calculatorChangeReturned, 'Toffee/Sweet')}
+                                                className="px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded-lg shadow-2xs transition active:scale-95 flex items-center gap-1"
+                                            >
+                                                <span>🍬</span>
+                                                <span>Give Rs. {calculatorChangeReturned} Item</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Insufficient Cash Warning */}
                             {calculatorCashReceived && (parseFloat(calculatorCashReceived) || 0) < totals.grandTotal && (
@@ -1706,7 +1858,16 @@ export default function PosPage() {
                 )}
             </Modal>
 
-
+            {/* Quick Custom / Open Item Modal */}
+            <QuickCustomItemModal
+                isOpen={isCustomItemOpen}
+                onClose={() => {
+                    setIsCustomItemOpen(false);
+                    setCustomItemInitialName('');
+                }}
+                initialName={customItemInitialName}
+                onItemAdded={handleCustomItemAdded}
+            />
 
             <style dangerouslySetInnerHTML={{
                 __html: `

@@ -233,7 +233,7 @@ export default function BakeryTemplatesPage() {
             : '0.0';
 
     return (
-        <div className="p-6 max-w-7xl mx-auto space-y-6">
+        <div className="p-3 sm:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-6">
             {/* Datalist for fast item name autocomplete */}
             <datalist id="bakery-product-suggestions">
                 {products.map((p) => (
@@ -242,24 +242,24 @@ export default function BakeryTemplatesPage() {
             </datalist>
 
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-200">
                 <div className="flex items-center gap-3">
-                    <div className="p-3 bg-amber-50 rounded-xl text-amber-700 border border-amber-200">
-                        <Coffee className="w-7 h-7" />
+                    <div className="p-2.5 sm:p-3 bg-amber-50 rounded-xl text-amber-700 border border-amber-200 flex-shrink-0">
+                        <Coffee className="w-6 h-6 sm:w-7 sm:h-7" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-800">Supplier Bakery Templates</h1>
-                        <p className="text-sm text-slate-500">
+                        <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Supplier Bakery Templates</h1>
+                        <p className="text-xs sm:text-sm text-slate-500">
                             Configure standard daily items, buy prices, selling prices & profit margins per supplier
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                     <button
                         type="button"
                         onClick={() => navigate('/bakery/daily-receiving')}
-                        className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition"
+                        className="px-3.5 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition text-center"
                     >
                         Go to Daily Receiving
                     </button>
@@ -269,7 +269,7 @@ export default function BakeryTemplatesPage() {
                             setSelectedSupplierId(suppliers[0]?._id || '');
                             setIsEditorOpen(true);
                         }}
-                        className="px-5 py-2.5 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg shadow-sm flex items-center gap-2 transition"
+                        className="px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg shadow-sm flex items-center justify-center gap-2 transition"
                     >
                         <Plus className="w-4 h-4" />
                         + Setup Supplier Template
@@ -278,12 +278,12 @@ export default function BakeryTemplatesPage() {
             </div>
 
             {/* Quick Supplier Picker Bar */}
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
                 <div className="flex-1">
                     <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
                         Select Supplier to Configure or Edit Structure
                     </label>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                         <select
                             value={selectedSupplierId}
                             onChange={(e) => {
@@ -292,7 +292,7 @@ export default function BakeryTemplatesPage() {
                                     handleOpenEditorForSupplier(e.target.value);
                                 }
                             }}
-                            className="flex-1 max-w-md px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-800 bg-white"
+                            className="w-full sm:flex-1 sm:max-w-md px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm font-medium text-slate-800 bg-white"
                         >
                             <option value="">-- Choose a Bakery Supplier --</option>
                             {suppliers.map((s) => (
@@ -304,7 +304,7 @@ export default function BakeryTemplatesPage() {
                         <button
                             type="button"
                             onClick={() => setIsSupplierModalOpen(true)}
-                            className="text-xs font-bold text-amber-600 hover:text-amber-700 underline"
+                            className="text-xs font-bold text-amber-600 hover:text-amber-700 underline text-left sm:text-center"
                         >
                             + Add New Supplier
                         </button>
@@ -318,7 +318,7 @@ export default function BakeryTemplatesPage() {
                         placeholder="Search saved templates..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                        className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm bg-white"
                     />
                 </div>
             </div>
@@ -446,34 +446,34 @@ export default function BakeryTemplatesPage() {
 
             {/* Template Editor Full Modal with Direct Inline Table */}
             {isEditorOpen && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl space-y-4 max-h-[92vh] flex flex-col">
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2 sm:p-4">
+                    <div className="bg-white rounded-xl sm:rounded-2xl max-w-4xl w-full p-3.5 sm:p-6 shadow-2xl space-y-3 sm:space-y-4 max-h-[96vh] sm:max-h-[92vh] flex flex-col">
                         {/* Header */}
-                        <div className="flex items-center justify-between border-b pb-3">
-                            <div className="flex items-center gap-2.5">
-                                <div className="p-2.5 bg-amber-50 rounded-xl text-amber-700 border border-amber-200">
-                                    <Coffee className="w-6 h-6" />
+                        <div className="flex items-center justify-between border-b pb-2.5 sm:pb-3 flex-shrink-0">
+                            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                                <div className="p-2 sm:p-2.5 bg-amber-50 rounded-lg sm:rounded-xl text-amber-700 border border-amber-200 flex-shrink-0">
+                                    <Coffee className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-slate-800 text-lg">
+                                <div className="min-w-0">
+                                    <h3 className="font-bold text-slate-800 text-base sm:text-lg truncate">
                                         {selectedSupplierId ? 'Configure Supplier Pricing Template' : 'Setup Supplier Template'}
                                     </h3>
-                                    <p className="text-xs text-slate-500">
+                                    <p className="text-[11px] sm:text-xs text-slate-500 line-clamp-1 sm:line-clamp-none">
                                         Add items directly in the table below. Enter buy & sell prices to calculate profit in real time.
                                     </p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setIsEditorOpen(false)}
-                                className="text-slate-400 hover:text-slate-600 p-1"
+                                className="text-slate-400 hover:text-slate-600 p-1.5 -mr-1 rounded-lg flex-shrink-0 transition"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSaveTemplate} className="space-y-4 flex-1 overflow-hidden flex flex-col text-sm">
+                        <form onSubmit={handleSaveTemplate} className="space-y-3 sm:space-y-4 flex-1 overflow-hidden flex flex-col text-sm">
                             {/* Supplier & Template Name Bar */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 bg-slate-50 p-3 sm:p-3.5 rounded-xl border border-slate-200 flex-shrink-0">
                                 <div>
                                     <div className="flex items-center justify-between mb-1">
                                         <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
@@ -490,7 +490,7 @@ export default function BakeryTemplatesPage() {
                                     <select
                                         value={selectedSupplierId}
                                         onChange={(e) => setSelectedSupplierId(e.target.value)}
-                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-800 bg-white"
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm font-medium text-slate-800 bg-white"
                                         required
                                     >
                                         <option value="">-- Select Supplier --</option>
@@ -511,20 +511,20 @@ export default function BakeryTemplatesPage() {
                                         value={templateName}
                                         onChange={(e) => setTemplateName(e.target.value)}
                                         placeholder="e.g. Daily Short Eats & Buns Structure"
-                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm bg-white"
                                     />
                                 </div>
                             </div>
 
                             {/* Table Header Controls */}
-                            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1 flex-shrink-0">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-bold text-slate-800 text-sm">
+                                    <span className="font-bold text-slate-800 text-xs sm:text-sm">
                                         Standard Items & Price Agreements ({validItemsForStats.length})
                                     </span>
                                 </div>
 
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2">
                                     {/* Quick Existing Product Selector */}
                                     <select
                                         onChange={(e) => {
@@ -532,7 +532,7 @@ export default function BakeryTemplatesPage() {
                                             e.target.value = '';
                                         }}
                                         defaultValue=""
-                                        className="px-3 py-1.5 text-xs border border-slate-300 rounded-lg text-slate-700 bg-white"
+                                        className="flex-1 sm:flex-none px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg text-slate-700 bg-white min-w-[140px]"
                                     >
                                         <option value="" disabled>+ Pick Existing Product...</option>
                                         {products.map((p) => (
@@ -545,7 +545,7 @@ export default function BakeryTemplatesPage() {
                                     <button
                                         type="button"
                                         onClick={handleAdd5Rows}
-                                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition"
+                                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition"
                                     >
                                         + 5 Rows
                                     </button>
@@ -553,7 +553,7 @@ export default function BakeryTemplatesPage() {
                                     <button
                                         type="button"
                                         onClick={handleAddEmptyRow}
-                                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1 shadow-sm transition"
+                                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1 shadow-sm transition"
                                     >
                                         <Plus className="w-3.5 h-3.5" />
                                         + Add Item Row
@@ -561,9 +561,138 @@ export default function BakeryTemplatesPage() {
                                 </div>
                             </div>
 
-                            {/* Editable Items Table */}
-                            <div className="overflow-x-auto border border-slate-200 rounded-xl flex-1 overflow-y-auto">
-                                <table className="w-full text-left text-sm">
+                            {/* Mobile Card View (shown on screens < md) */}
+                            <div className="md:hidden flex-1 overflow-y-auto space-y-3 pr-0.5 border border-slate-200 rounded-xl p-2.5 bg-slate-50/50">
+                                {items.length === 0 ? (
+                                    <div className="text-center py-6 text-slate-400 text-xs">
+                                        No items added yet. Click "+ Add Item Row" to start.
+                                    </div>
+                                ) : (
+                                    items.map((item, idx) => {
+                                        const buy = Number(item.defaultBuyPrice) || 0;
+                                        const sell = Number(item.defaultSellPrice) || 0;
+                                        const profit = sell > 0 ? +(sell - buy).toFixed(2) : 0;
+                                        const margin = sell > 0 ? +((profit / sell) * 100).toFixed(1) : 0;
+
+                                        return (
+                                            <div key={idx} className="bg-white rounded-xl p-3 border border-slate-200 shadow-xs space-y-2.5">
+                                                {/* Header inside Card: Row Number, Return Type, Delete */}
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-mono font-bold flex items-center justify-center border border-slate-200">
+                                                            {idx + 1}
+                                                        </span>
+                                                        <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Item #{idx + 1}</span>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-1.5">
+                                                        <select
+                                                            value={item.isDailyReturnable !== false ? 'daily' : 'shelf'}
+                                                            onChange={(e) => handleItemChange(idx, 'isDailyReturnable', e.target.value === 'daily')}
+                                                            className={`px-2 py-1 text-[11px] font-bold rounded-lg border focus:ring-2 focus:ring-amber-500 outline-none ${
+                                                                item.isDailyReturnable !== false 
+                                                                    ? 'bg-amber-50 border-amber-300 text-amber-900' 
+                                                                    : 'bg-purple-50 border-purple-300 text-purple-900'
+                                                            }`}
+                                                        >
+                                                            <option value="daily">🥐 Daily Return</option>
+                                                            <option value="shelf">🍪 Multi-Day Shelf</option>
+                                                        </select>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveItem(idx)}
+                                                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                                            title="Delete Row"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Short Eat Name Input */}
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                                                        Short Eat / Item Name <span className="text-rose-500">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        list="bakery-product-suggestions"
+                                                        placeholder="e.g. Fish Bun / Chicken Roll / Egg Roti"
+                                                        value={item.productName}
+                                                        onChange={(e) => handleItemChange(idx, 'productName', e.target.value)}
+                                                        className="w-full px-3 py-1.5 text-xs font-bold text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white placeholder:font-normal"
+                                                    />
+                                                </div>
+
+                                                {/* Buy & Sell Price Inputs */}
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                                                            Buy Price (Rs.) <span className="text-rose-500">*</span>
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.5"
+                                                            placeholder="e.g. 70"
+                                                            value={item.defaultBuyPrice}
+                                                            onChange={(e) => handleItemChange(idx, 'defaultBuyPrice', e.target.value)}
+                                                            className="w-full px-2.5 py-1.5 text-right text-xs font-mono font-bold text-slate-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 bg-white"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                                                            Sell Price (Rs.) <span className="text-rose-500">*</span>
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.5"
+                                                            placeholder="e.g. 100"
+                                                            value={item.defaultSellPrice}
+                                                            onChange={(e) => handleItemChange(idx, 'defaultSellPrice', e.target.value)}
+                                                            className="w-full px-2.5 py-1.5 text-right text-xs font-mono font-bold text-emerald-800 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Calculated Profit & Margin bar */}
+                                                <div className="flex items-center justify-between bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100 text-[11px]">
+                                                    <span className="text-slate-500 font-medium">Profit & Margin:</span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span
+                                                            className={`font-bold font-mono px-1.5 py-0.5 rounded ${
+                                                                profit > 0
+                                                                    ? 'text-emerald-700 bg-emerald-50'
+                                                                    : profit < 0
+                                                                    ? 'text-rose-700 bg-rose-50'
+                                                                    : 'text-slate-400'
+                                                            }`}
+                                                        >
+                                                            Rs. {profit.toFixed(2)}
+                                                        </span>
+                                                        <span
+                                                            className={`font-bold font-mono px-1.5 py-0.5 rounded ${
+                                                                margin >= 25
+                                                                    ? 'text-emerald-700 bg-emerald-100'
+                                                                    : margin > 0
+                                                                    ? 'text-amber-800 bg-amber-100'
+                                                                    : 'text-slate-400'
+                                                            }`}
+                                                        >
+                                                            {margin}%
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+
+                            {/* Desktop / Tablet Table View (shown on md+ screens) */}
+                            <div className="hidden md:block overflow-x-auto border border-slate-200 rounded-xl flex-1 overflow-y-auto min-h-[160px]">
+                                <table className="w-full text-left text-sm min-w-[680px]">
                                     <thead className="bg-slate-100 text-slate-600 uppercase text-[11px] font-bold tracking-wider sticky top-0 border-b border-slate-200 z-10">
                                         <tr>
                                             <th className="py-2.5 px-3 w-10 text-center">#</th>
@@ -693,28 +822,28 @@ export default function BakeryTemplatesPage() {
                             </div>
 
                             {/* Live Profit Summary Ribbon */}
-                            <div className="grid grid-cols-3 gap-3 bg-amber-50/70 p-3 rounded-xl border border-amber-200 text-xs">
+                            <div className="grid grid-cols-3 gap-2 sm:gap-3 bg-amber-50/70 p-2.5 sm:p-3 rounded-xl border border-amber-200 text-xs flex-shrink-0">
                                 <div>
-                                    <span className="text-slate-500 block">Total Items Configured</span>
-                                    <span className="font-bold text-slate-800 text-sm">
+                                    <span className="text-slate-500 block text-[10px] sm:text-xs leading-tight">Total Items</span>
+                                    <span className="font-bold text-slate-800 text-xs sm:text-sm">
                                         {validItemsForStats.length} items
                                     </span>
                                 </div>
                                 <div className="text-center">
-                                    <span className="text-slate-500 block">Total Bundle Profit Potential</span>
-                                    <span className="font-bold text-emerald-700 text-sm">
+                                    <span className="text-slate-500 block text-[10px] sm:text-xs leading-tight">Profit Potential</span>
+                                    <span className="font-bold text-emerald-700 text-xs sm:text-sm">
                                         Rs. {totalUnitProfit.toFixed(2)}
                                     </span>
                                 </div>
                                 <div className="text-right">
-                                    <span className="text-slate-500 block">Average Profit Margin</span>
-                                    <span className="font-bold text-amber-800 text-sm">
+                                    <span className="text-slate-500 block text-[10px] sm:text-xs leading-tight">Avg Margin</span>
+                                    <span className="font-bold text-amber-800 text-xs sm:text-sm">
                                         {avgMargin}%
                                     </span>
                                 </div>
                             </div>
 
-                            <div>
+                            <div className="flex-shrink-0">
                                 <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
                                     Notes & Return Agreement Terms
                                 </label>
@@ -723,40 +852,40 @@ export default function BakeryTemplatesPage() {
                                     value={notes}
                                     onChange={(e) => setNotes(e.target.value)}
                                     placeholder="e.g. Daily morning returns accepted for unsold items and deducted from bill"
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs sm:text-sm bg-white"
                                 />
                             </div>
 
                             {/* Footer Buttons */}
-                            <div className="flex items-center justify-between pt-3 border-t">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3 border-t flex-shrink-0">
                                 <button
                                     type="button"
                                     onClick={handleAddEmptyRow}
-                                    className="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center gap-1.5 transition"
+                                    className="order-2 sm:order-1 px-3.5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center justify-center gap-1.5 transition"
                                 >
                                     <Plus className="w-4 h-4" />
                                     + Add Another Row
                                 </button>
 
-                                <div className="flex items-center gap-3">
+                                <div className="order-1 sm:order-2 flex items-center gap-2 sm:gap-3">
                                     <button
                                         type="button"
                                         onClick={() => setIsEditorOpen(false)}
-                                        className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
+                                        className="flex-1 sm:flex-none px-3.5 sm:px-4 py-2 text-xs sm:text-sm text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 sm:border-transparent text-center transition"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={saveMutation.isPending || validItemsForStats.length === 0}
-                                        className="px-6 py-2.5 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 rounded-lg shadow-sm flex items-center gap-2 transition"
+                                        className="flex-[2] sm:flex-none px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 rounded-lg shadow-sm flex items-center justify-center gap-1.5 sm:gap-2 transition"
                                     >
                                         {saveMutation.isPending ? (
                                             <RefreshCw className="w-4 h-4 animate-spin" />
                                         ) : (
                                             <Save className="w-4 h-4" />
                                         )}
-                                        Save Supplier Template
+                                        <span>Save Supplier Template</span>
                                     </button>
                                 </div>
                             </div>

@@ -143,24 +143,24 @@ export default function BakerySupplierModal({ isOpen, onClose, onCreated, suppli
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2 sm:p-4">
+            <div className="bg-white rounded-xl sm:rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-3 sm:space-y-4 max-h-[96vh] sm:max-h-[92vh] overflow-y-auto">
                 {/* Header */}
-                <div className="flex items-center justify-between border-b pb-3">
-                    <div className="flex items-center gap-2.5">
-                        <div className="p-2.5 bg-amber-50 rounded-xl text-amber-700 border border-amber-200">
-                            <Coffee className="w-6 h-6" />
+                <div className="flex items-center justify-between border-b pb-2.5 sm:pb-3">
+                    <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                        <div className="p-2 sm:p-2.5 bg-amber-50 rounded-lg sm:rounded-xl text-amber-700 border border-amber-200 flex-shrink-0">
+                            <Coffee className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
-                        <div>
-                            <h3 className="font-bold text-slate-800 text-lg">
+                        <div className="min-w-0">
+                            <h3 className="font-bold text-slate-800 text-base sm:text-lg truncate">
                                 {isEdit ? 'Edit Bakery Supplier' : 'New Bakery & Short Eats Supplier'}
                             </h3>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-[11px] sm:text-xs text-slate-500 line-clamp-1 sm:line-clamp-none">
                                 Register daily morning short-eats, buns, and pastry bakers with agreed terms
                             </p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1">
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1.5 -mr-1 rounded-lg flex-shrink-0 transition">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -337,18 +337,18 @@ export default function BakerySupplierModal({ isOpen, onClose, onCreated, suppli
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="flex items-center justify-end gap-3 pt-3 border-t">
+                    <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-3 border-t">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                            className="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 sm:border-transparent text-center transition"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={mutation.isPending}
-                            className="px-6 py-2.5 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg shadow-sm flex items-center gap-2 transition"
+                            className="px-6 py-2.5 text-xs sm:text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg shadow-sm flex items-center justify-center gap-2 transition"
                         >
                             {mutation.isPending ? (
                                 <RefreshCw className="w-4 h-4 animate-spin" />

@@ -175,6 +175,8 @@ export const createSalesOrder = asyncHandler(async (req, res) => {
 
             // Deduct stock if approved (common for POS)
             if (order.status === 'approved') {
+                const allowNegative = order.source === 'pos' || warehouse.settings?.allowNegativeStock === true;
+
                 for (const item of order.items) {
                     const product = await Product.findById(item.productId).session(session);
                     const isNonStock = !product 
@@ -192,7 +194,7 @@ export const createSalesOrder = asyncHandler(async (req, res) => {
                             batchNumber: null,
                         }).session(session);
 
-                        if (!stockItem || stockItem.quantities.onHand < item.orderedQuantity) {
+                        if (!allowNegative && (!stockItem || stockItem.quantities.onHand < item.orderedQuantity)) {
                             throw new Error(`Insufficient stock for "${item.productName}"`);
                         }
 
@@ -201,6 +203,7 @@ export const createSalesOrder = asyncHandler(async (req, res) => {
                             quantity: item.orderedQuantity, movementType: 'sale_dispatch',
                             sourceDocument: { type: 'sales_order', id: order._id, number: order.orderNumber },
                             reason: 'Order created as approved', userId: req.user._id, session,
+                            allowNegative,
                         });
                     }
                     item.dispatchedQuantity = item.orderedQuantity;
@@ -490,20 +493,22 @@ export const changeSalesOrderStatus = asyncHandler(async (req, res) => {
                     const shouldTrackStock = !isNonStock;
 
                     if (shouldTrackStock) {
-                        // Check that stock exists and is sufficient
+                        const targetWarehouse = await Warehouse.findById(warehouseId).session(session);
+                        const allowNegative = order.source === 'pos' || targetWarehouse?.settings?.allowNegativeStock === true;
+
                         const stockItem = await StockItem.findOne({
                             productId: item.productId,
                             warehouseId,
                             batchNumber: null,
                         }).session(session);
 
-                        if (!stockItem) {
+                        if (!allowNegative && !stockItem) {
                             throw new Error(
                                 `No stock record found for "${item.productName}" in the selected warehouse. Please enter opening stock first.`
                             );
                         }
 
-                        if (stockItem.quantities.onHand < item.orderedQuantity) {
+                        if (!allowNegative && stockItem.quantities.onHand < item.orderedQuantity) {
                             throw new Error(
                                 `Insufficient stock for "${item.productName}". On hand: ${stockItem.quantities.onHand}, ordered: ${item.orderedQuantity}`
                             );
@@ -523,6 +528,7 @@ export const changeSalesOrderStatus = asyncHandler(async (req, res) => {
                             reason: 'Sales order approved',
                             userId: req.user._id,
                             session,
+                            allowNegative,
                         });
                     }
 

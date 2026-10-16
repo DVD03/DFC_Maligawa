@@ -14,7 +14,7 @@ export const productFormSchema = z.object({
     canBePurchased: z.boolean().optional(),
     canBeManufactured: z.boolean().optional(),
     description: z.string().max(2000).optional().or(z.literal('')),
-    categoryId: z.string().min(1, 'Category is required'),
+    categoryId: z.string().optional().or(z.literal('')),
     brandId: z.string().optional().or(z.literal('')),
     type: z.enum(['manufactured', 'trading', 'service', 'bundle']).optional().default('trading'),
     unitOfMeasure: z.string().min(1, 'Unit of measure is required').default('pcs'),
@@ -34,7 +34,7 @@ export const productFormSchema = z.object({
     minimumOrderQuantity: z.coerce.number().min(0).optional(),
     sellable: z.boolean().optional(),
     allowBackorder: z.boolean().optional(),
-    status: z.enum(['active', 'inactive', 'draft', 'discontinued']),
+    status: z.enum(['active', 'inactive', 'draft', 'discontinued']).optional().default('active'),
     notes: z.string().max(1000).optional().or(z.literal('')),
     productNature: z.enum(['single', 'variable', 'combo']).optional(),
     variations: z.array(z.object({

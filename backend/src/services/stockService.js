@@ -110,12 +110,26 @@ export const decreaseStock = async ({
 }) => {
     if (!quantity || quantity <= 0) throw new Error('Quantity must be greater than 0');
 
-    const stockItem = await StockItem.findOne({
+    let stockItem = await StockItem.findOne({
         productId, warehouseId, batchNumber,
     }).session(session || null);
 
     if (!stockItem) {
-        throw new Error(`No stock found for this product in the selected warehouse`);
+        if (!allowNegative) {
+            throw new Error(`No stock found for this product in the selected warehouse`);
+        }
+        const product = await Product.findById(productId).session(session || null);
+        stockItem = new StockItem({
+            productId,
+            warehouseId,
+            batchNumber,
+            productCode: product?.productCode || '',
+            productName: product?.name || '',
+            unitOfMeasure: product?.unitOfMeasure || 'pcs',
+            quantities: { onHand: 0, reserved: 0 },
+            totalValue: 0,
+            costPerUnit: product?.purchasePrice || 0,
+        });
     }
 
     const balanceBefore = stockItem.quantities.onHand;
